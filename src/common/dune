@@ -1,0 +1,22 @@
+(env
+ (_ (env-vars
+     ("PPX_ENCODING_MODULE" "")
+     ("PPX_JSOO_FAKE" "true"))))
+
+(library
+ (name rp)
+ (modules rp)
+ (libraries lwt))
+
+(library
+ (name types)
+ (modules types)
+ (preprocessor_deps (env_var "PPX_ENCODING_MODULE") (env_var "PPX_JSOO_FAKE"))
+ (preprocess (pps ppx_deriving_encoding ppx_deriving_jsoo ppx_deriving_empty))
+ (libraries hex calendar))
+
+(library
+ (name api)
+ (modules api)
+ (preprocess (pps ez_api.ppx_client))
+ (libraries types ez_api.icurl_lwt rp))
