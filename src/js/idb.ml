@@ -55,7 +55,7 @@ let open_db ?(version=List.length versions) f =
 let get_show db id =
   let st = ShowStore.store ~mode:READONLY db shows in
   let w, n = Lwt.wait () in
-  ShowStore.get ~error:(fun _ -> Lwt.wakeup n (Ok None)) st
+  ShowStore.get ~error:(fun _ -> Lwt.wakeup n (Error (0, []))) st
     (fun s -> Lwt.wakeup n (Ok s)) (ShowStore.K id);
   w
 
@@ -67,8 +67,12 @@ let put_show db id s =
   let st = ShowStore.store ~mode:READWRITE db shows in
   ShowStore.put ~key:id st s
 
-let store_show db =
-  get_show db, add_show db
+let remove_show db id =
+  let st = ShowStore.store ~mode:READWRITE db shows in
+  ShowStore.delete st (ShowStore.K id)
+
+let manage_show db =
+  get_show db, add_show db, put_show db, remove_show db
 
 let get_shows db =
   let st = ShowStore.store ~mode:READONLY db shows in

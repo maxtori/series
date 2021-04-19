@@ -58,6 +58,8 @@ let released_param = Param.int "released"
 let id_param = Param.int "id"
 let show_id_param = Param.int "showId"
 let season_param = Param.int "season"
+let order_param = Param.string "order"
+let status_param = Param.string "status"
 
 [@@@get {name="episodes"; path="/episodes/list"; errors;
          output=list_shows_enc; params=[limit_param; released_param; show_id_param]}]
@@ -138,6 +140,27 @@ let get_show_episodes ?token ?season id =
   get0 ~msg:"show_episodes" base show_episodes ~headers:(headers token)
     ~params:((id_param, I id) :: params)
 
+[@@@get {name="my_shows"; path="/shows/member"; errors; output=search_shows_enc;
+         params=[order_param; status_param]}]
+
+let my_shows ?(order="last_seen") ?(status="active") token =
+  let params = [order_param, S order; status_param, S status] in
+  Lwt.map handle @@
+  get0 ~msg:"my_shows" base my_shows ~headers:(headers (Some token)) ~params
+
+[@@@post {name="archive"; path="/shows/archive"; errors; output=display_show_enc; params=[id_param]}]
+[@@@delete {name="unarchive"; path="/shows/archive"; errors; output=display_show_enc; params=[id_param]}]
+
+let archive_show ~token id =
+  Lwt.map handle @@
+  post0 ~msg:"archive" base archive ~headers:(headers (Some token))
+    ~params:[id_param, I id] ~input:()
+
+let unarchive_show ~token id =
+  Lwt.map handle @@
+  post0 ~msg:"unarchive" base unarchive ~headers:(headers (Some token))
+    ~params:[id_param, I id] ~input:()
+
 (* MAIN *)
 
 let print_error p =
@@ -164,7 +187,7 @@ let get_unseen ?(limit=1) ?(released=0) ?(period=Cal.Period.week 1) ?store ?id ?
   let now = Cal.today () in
   let@! l = fold (fun acc s ->
       let id = s.su_show.s_id in
-      let es_show = { s.su_show with s_title = format_show_title s.su_show.s_title } in
+      let es_show = s.su_show in
       match s.su_unseen with
       | e :: _ ->
         let e = {e with e_title = format_filename e.e_title} in
@@ -177,15 +200,20 @@ let get_unseen ?(limit=1) ?(released=0) ?(period=Cal.Period.week 1) ?store ?id ?
               | None ->
                 let@! s = get_show ~token id in
                 ffill s
-              | Some (get, add) ->
-                let@ s = get id in
+              | Some (get, add, put, _delete) ->
+                let> s = get id in
                 match s with
-                | None ->
+                | Error _ ->
+                  let@! s = get_show ~token id in
+                  let s = ffill s in
+                  put id s;
+                  s
+                | Ok None ->
                   let@! s = get_show ~token id in
                   let s = ffill s in
                   add id s;
                   s
-                | Some s ->
+                | Ok (Some s) ->
                   Lwt.return_ok s in
           {es_show; es_episode} :: acc
         else
