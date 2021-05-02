@@ -5,7 +5,7 @@ type hex = Hex.t [@encoding conv Hex.show (fun s -> `Hex s) string]
 [@@deriving encoding, jsoo]
 
 type tsp = Cal.t [@encoding conv CalendarLib.Printer.Date.to_string CalendarLib.Printer.Date.from_string string]
-           [@class_type "Ezjs_min.date"]
+           [@class_type Ezjs_min.date]
            [@conv ((fun js -> Cal.from_unixfloat (js##getTime /. 1000.)),
                    (fun c -> new%js Ezjs_min.date_fromTimeValue (1000. *. Cal.to_unixfloat c)))]
 [@@deriving encoding, jsoo]
@@ -40,7 +40,7 @@ type episode = {
   e_title: string;
   e_season: int;
   e_episode: int;
-  e_date: tsp;
+  e_date: tsp option;
   e_code: string;
   e_code_fmt: string; [@exclude ""]
   e_global: int;
@@ -62,7 +62,7 @@ type show_user = {
 type show = {
   s_id: int;
   s_imdb_id: string option;
-  s_title: string;
+  s_title: string; [@mutable]
   s_genres: (string * string) list;
   [@dft []] [@assoc] [@encoding union [
     case (list (tup2 string string)) (function [] -> Some [] | _ -> None) (fun l -> l);
@@ -74,6 +74,7 @@ type show = {
   s_in_account: bool; [@dft false]
   s_seasons: string; [@dft ""]
   s_user: show_user; [@dft {su_archived=false; su_favorited=false}]
+  s_aliases: (string * string) list [@assoc] [@dft []]
 } [@@deriving encoding {ignore}, jsoo]
 
 type show_unseen = {

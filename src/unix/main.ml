@@ -19,10 +19,20 @@ let store_token ?(file=".token") token =
   close_out oc
 
 let get_token () =
-  let@! (token, changed) = Api.get_token ?token:(read_token ()) () in
-  if changed then store_token token;
-  Format.printf "Use token: %s@." token;
-  token
+  let scan_token () =
+    Format.printf "Username:@.";
+    let login = Scanf.scanf "%s" (fun s -> s) in
+    Format.printf "Password:@.";
+    let password = Scanf.scanf "%s" (fun s -> s) in
+    let@! auth = Api.request_token ~login ~password in
+    store_token auth.a_token;
+    auth.a_token in
+  match read_token () with
+  | Some token ->
+    let> active = Api.active_token token in
+    if active then Lwt.return_ok token
+    else scan_token ()
+  | None -> scan_token ()
 
 let file_info f =
   match String.rindex_opt f '.' with

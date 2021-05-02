@@ -9,6 +9,11 @@ type serie = {
   se_season : int option; [@mutable]
 } [@@deriving jsoo]
 
+type login = {
+  username : string; [@mutable]
+  password : string; [@mutable]
+} [@@deriving jsoo]
+
 type data = {
   shows : episode_show list; [@mutable]
   db : Ezjs_idb.Types.iDBDatabase t; [@mutable] [@ignore]
@@ -18,6 +23,7 @@ type data = {
   series : show list; [@mutable]
   theme : theme; [@mutable]
   serie : serie option; [@mutable]
+  login : login; [@mutable]
 } [@@deriving jsoo]
 
 module V = Vue_js.Make(struct
@@ -61,14 +67,17 @@ let update_show app s =
   let s = show_of_jsoo s in
   Api.run @@
   let@! s2 = Api.get_show ~token:data.token s.s_id in
-  let es_show = {s with s_images = s2.s_images; s_genres = s2.s_genres;
-                        s_outdated = false} in
+  let es_show = {s2 with s_title = s.s_title; s_outdated = false} in
   Idb.put_show app##.db s.s_id es_show;
   List.iteri
     (fun i ss ->
        if ss.es_show.s_id = s.s_id then
          ignore @@ app##.shows##splice_1 i 1 (episode_show_to_jsoo {ss with es_show}))
     data.shows
+
+let update_shows app =
+  let shows = to_listf episode_show_of_jsoo app##.shows in
+  List.iter (fun s -> if s.es_show.s_outdated then update_show app (show_to_jsoo s.es_show)) shows
 
 let set_outdated _app s =
   s##.outdated := _true
@@ -145,7 +154,7 @@ let set_body_class = function
   | None -> Dom_html.document##.body##removeAttribute (string "class")
   | Some c -> Dom_html.document##.body##setAttribute (string "class") (string c)
 
-let change_theme app =
+let switch_theme app =
   let theme, s = if app##.theme##.body = undefined then dark_theme, "dark" else light_theme, "light" in
   app##.theme := theme_to_jsoo theme;
   set_body_class theme.t_body;
@@ -153,7 +162,11 @@ let change_theme app =
 
 let serie app id =
   Api.run @@
-  let@ se_show = Api.get_show ~token:(to_string app##.token) id in
+  let@ show = Idb.get_show app##.db id in
+  let@ se_show = match show with
+    | None ->
+      Api.get_show ~token:(to_string app##.token) id
+    | Some s -> Lwt.return_ok s in
   let season = int_of_string_opt se_show.s_seasons in
   let@! se_episodes = Api.get_show_episodes ~token:(to_string app##.token) ?season id in
   app##.serie := def (serie_to_jsoo {se_show; se_episodes; se_season=season})
@@ -171,6 +184,14 @@ let update_episodes app season =
       serie##.season := def season;
       serie##.episodes := of_listf episode_to_jsoo se_episodes
 
+let change_title (app : data_jsoo t) s =
+  match Optdef.to_option app##.serie with
+  | None -> ()
+  | Some serie ->
+    serie##.show##.title := s;
+    let show = show_of_jsoo serie##.show in
+    Idb.put_show app##.db show.s_id {show with s_title = to_string s}
+
 let home app =
   Api.run @@
   let@! shows = Api.get_unseen ~store:(Idb.manage_show app##.db) (to_string app##.token) in
@@ -186,30 +207,49 @@ let file_path = ref false
 
 let get_path () =
   match Url.url_of_string (to_string Dom_html.window##.location##.href) with
-  | None -> ""
+  | None -> "", []
   | Some url -> match url with
-    | Url.Http hu | Url.Https hu -> String.concat "/" hu.Url.hu_path
+    | Url.Http hu | Url.Https hu -> String.concat "/" hu.Url.hu_path, hu.Url.hu_arguments
     | Url.File fu ->
       file_path := true;
-      String.concat "/" fu.Url.fu_path
+      String.concat "/" fu.Url.fu_path, []
 
-let set_path ?(scroll=true) l =
+let set_path ?(scroll=true) ?(args=[]) s =
   if not !file_path then
-    let path = some @@ string @@ "/" ^ String.concat "/" l in
+    let args = match args with
+      | [] -> ""
+      | l -> "?" ^ String.concat "&" @@ List.map (fun (k, v) -> k ^ "=" ^ v) l in
+    let path = some @@ string @@ "/" ^ s ^ args in
     Dom_html.window##.history##pushState path (string "") path;
     if scroll then Dom_html.window##scroll 0 0
 
-let route app path =
+let route app path id =
   app##.path := path;
-  let l = String.split_on_char '/' @@ to_string path in
-  let path, l = match l with
-    | ["search"] -> search app; "search", l
-    | ["discover"] -> discover app; "discover", l
-    | ["my_series"] -> my_series app; "my_series", l
-    | ["serie"; id] -> serie app (int_of_string id); "serie", l
-    | _ -> home app; "home", [] in
-  app##.path := string path;
-  set_path l
+  let path = to_string path in
+  let args = match path with
+    | "search" -> search app; []
+    | "discover" -> discover app; []
+    | "my_series" -> my_series app; []
+    | "login" -> []
+    | "serie" ->
+      begin match Optdef.to_option id with
+        | None -> home app; app##.path := string "home"; []
+        | Some id -> serie app id; ["id", string_of_int id]
+      end
+    | _ -> home app; app##.path := string "home"; [] in
+  set_path ~args path
+
+let sign_out app =
+  Idb.remove_config ~key:"token" app##.db;
+  route app (string "login") undefined
+
+let sign_in app =
+  let login = login_of_jsoo app##.login in
+  Api.run @@
+  let@! auth = Api.request_token ~login:login.username ~password:login.password in
+  app##.token := (string auth.a_token);
+  Idb.update_config ~key:"token" app##.db auth.a_token;
+  route app (string "home") undefined
 
 let () =
   V.add_method2 "copy" copy;
@@ -217,31 +257,43 @@ let () =
   V.add_method1 "watched" watched;
   V.add_method1 "variant" variant;
   V.add_method1 "update_show" update_show;
+  V.add_method0 "update_shows" update_shows;
   V.add_method1 "set_outdated" set_outdated;
   V.add_method1 "refresh_episode" refresh_episode;
   V.add_method1 "add_show" add_show;
   V.add_method1 "remove_show" remove_show;
   V.add_method1 "archive_show" archive_show;
   V.add_method1 "unarchive_show" unarchive_show;
-  V.add_method0 "change_theme" change_theme;
+  V.add_method0 "switch_theme" switch_theme;
   V.add_method1 "update_episodes" update_episodes;
+  V.add_method1 "change_title" change_title;
   V.add_method1 "route" route;
+  V.add_method0 "sign_in" sign_in;
+  V.add_method0 "sign_out" sign_out;
   Idb.open_db @@ fun db ->
   Api.run @@
   let@ theme = Idb.get_config ~key:"theme" db in
-  let@ token = Idb.get_config ~key:"token" db in
   let theme = match theme with
     | Some "dark" -> set_body_class @@ Some "bg-dark"; dark_theme
     | _ -> light_theme in
+  let@ token = Idb.get_config ~key:"token" db in
+  let login = {username=""; password=""} in
   let data = {
     shows = []; token=(match token with None -> "" | Some t -> t);
-    db; path="home"; series = []; query=""; theme; serie = None } in
+    db; path="home"; series = []; query=""; theme; serie = None; login } in
   let app = V.init ~data:(data_to_jsoo data) ~export:true ~show:true () in
-  let@! token, changed = Api.get_token ?token () in
-  app##.token := string token;
-  if changed then Idb.update_config ~key:"token" db token;
-  let path = get_path () in
-  Dom_html.window##.onpopstate := Dom_html.handler (fun _e ->
-      route app (string @@ get_path ());
-      _true);
-  route app (string path)
+  let f () =
+    let path, args = get_path () in
+    let id = optdef int_of_string @@ List.assoc_opt "id" args in
+    route app (string path) id in
+  Dom_html.window##.onpopstate := Dom_html.handler (fun _e -> f (); _true);
+  match token with
+  | None -> Lwt.return_ok @@ route app (string "login") undefined
+  | Some token ->
+    let>+ active = Api.active_token token in
+    if active then (
+      app##.token := string token;
+      f ())
+    else (
+      Idb.remove_config ~key:"token" db;
+      route app (string "login") undefined)

@@ -93,3 +93,7 @@ let get_config ~key db =
 let update_config ~key db value =
   let st = ConfigStore.store ~mode:READWRITE db config in
   ConfigStore.put ~key st value
+
+let remove_config ~key db =
+  let st = ConfigStore.store ~mode:READWRITE db config in
+  ConfigStore.delete st (K key)

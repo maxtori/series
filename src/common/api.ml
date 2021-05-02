@@ -7,8 +7,6 @@ let base = BASE "https://api.betaseries.com"
 
 (* AUTH *)
 
-let login = "sighs"
-let password = "KHAINE"
 let api_key = "81a536f9a7a2"
 let headers token = [
   "X-BetaSeries-Version", "3.0";
@@ -41,15 +39,9 @@ let request_token ~login ~password =
   post0 ~msg:"auth" base auth ~input:() ~headers:(headers None)
     ~params:[login_param, S login; pwd_param, S (hash_pwd password)]
 
-let get_token ?token ?(login=login) ?(password=password) () =
-  let f () =
-    Lwt.map (function Error e -> Error e | Ok {a_token; _} -> Ok (a_token, true))
-      (request_token ~login ~password) in
-  match token with
-  | None -> f ()
-  | Some token ->
-    Lwt.bind (get0 ~msg:"is_active" base is_active ~headers:(headers (Some token)))
-      (function Error _ -> f () | Ok _ -> Lwt.return_ok (token, false))
+let active_token token =
+  Lwt.map (fun r -> match handle r with Error _ -> false | Ok () -> true) @@
+  get0 ~msg:"is_active" base is_active ~headers:(headers (Some token))
 
 (* EPISODES *)
 
@@ -182,7 +174,7 @@ let format_show_title s =
     format_filename @@ String.trim @@ String.sub s 0 i
   else format_filename s
 
-let get_unseen ?(limit=1) ?(released=0) ?(period=Cal.Period.week 1) ?store ?id ?(fill=true) token =
+let get_unseen ?(limit=1) ?(released=0) ?(period=Cal.Period.day 8) ?store ?id ?(fill=true) token =
   let@ shows = get_episodes ~limit ~released ?id token in
   let now = Cal.today () in
   let@! l = fold (fun acc s ->
@@ -191,33 +183,37 @@ let get_unseen ?(limit=1) ?(released=0) ?(period=Cal.Period.week 1) ?store ?id ?
       match s.su_unseen with
       | e :: _ ->
         let e = {e with e_title = format_filename e.e_title} in
-        if Cal.(Period.compare (sub e.e_date now) period) < 0 then
-          let es_episode = Some {e with e_status = episode_status now e.e_date} in
-          let ffill s = {es_show with s_images = s.s_images; s_genres = s.s_genres} in
-          let@! es_show =
-            if not fill then Lwt.return_ok es_show
-            else match store with
-              | None ->
-                let@! s = get_show ~token id in
-                ffill s
-              | Some (get, add, put, _delete) ->
-                let> s = get id in
-                match s with
-                | Error _ ->
-                  let@! s = get_show ~token id in
-                  let s = ffill s in
-                  put id s;
-                  s
-                | Ok None ->
-                  let@! s = get_show ~token id in
-                  let s = ffill s in
-                  add id s;
-                  s
-                | Ok (Some s) ->
-                  Lwt.return_ok s in
-          {es_show; es_episode} :: acc
-        else
-          Lwt.return_ok acc
+        begin match e.e_date with
+          | None -> Lwt.return_ok acc
+          | Some date ->
+            if Cal.(Period.compare (sub date now) period) < 0 then
+              let es_episode = Some {e with e_status = episode_status now date} in
+              let ffill s = {es_show with s_images = s.s_images; s_genres = s.s_genres} in
+              let@! es_show =
+                if not fill then Lwt.return_ok es_show
+                else match store with
+                  | None ->
+                    let@! s = get_show ~token id in
+                    ffill s
+                  | Some (get, add, put, _delete) ->
+                    let> s = get id in
+                    match s with
+                    | Error _ ->
+                      let@! s = get_show ~token id in
+                      let s = ffill s in
+                      put id s;
+                      s
+                    | Ok None ->
+                      let@! s = get_show ~token id in
+                      let s = ffill s in
+                      add id s;
+                      s
+                    | Ok (Some s) ->
+                      Lwt.return_ok s in
+              {es_show; es_episode} :: acc
+            else
+              Lwt.return_ok acc
+        end
       | _ -> Lwt.return_ok acc)
       [] shows in
   List.sort (fun s1 s2 ->
@@ -226,6 +222,10 @@ let get_unseen ?(limit=1) ?(released=0) ?(period=Cal.Period.week 1) ?store ?id ?
       | Some _, None -> -1
       | None, Some _ -> 1
       | Some e1, Some e2 ->
-        Cal.compare e1.e_date e2.e_date) l
+        match e1.e_date, e2.e_date with
+        | None, None -> 0
+        | Some _, None -> -1
+        | None, Some _ -> 1
+        | Some d1, Some d2 -> Cal.compare d1 d2) l
 
 let run p = EzLwtSys.run (fun () -> print_error p)
