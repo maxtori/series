@@ -1,6 +1,7 @@
 open Rp
 open Ezjs_min
 open Types
+open Jsoo
 open Theme
 
 type serie = {

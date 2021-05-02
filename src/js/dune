@@ -1,35 +1,26 @@
-(env
- (_ (env-vars
-     ("PPX_ENCODING_MODULE" "")
-     ("PPX_JSOO_FAKE" "false"))))
+(env (_ (flags (:standard -w +a-4-27-41-42-44-45-48))))
+
+(rule
+ (deps ../common/types.ml)
+ (targets jsoo.ml)
+ (action (with-stdout-to %{targets} (run derive_jsoo %{deps}))))
 
 (library
- (name types_js)
- (modules types)
- (wrapped false)
- (preprocessor_deps (env_var "PPX_ENCODING_MODULE") (env_var "PPX_JSOO_FAKE"))
- (preprocess (pps ppx_deriving_encoding ppx_deriving_jsoo ppx_deriving_empty))
- (libraries hex calendar)
- (modes byte))
-
-(library
- (name api_js)
- (modules api)
- (wrapped false)
- (preprocess (pps ez_api.ppx_client))
- (libraries types_js ez_api.ixhr_lwt rp)
+ (name jsoo)
+ (modules jsoo)
+ (libraries types)
  (modes byte))
 
 (library
  (name idb)
  (modules idb)
  (preprocess (pps ppx_deriving_jsoo))
- (libraries types_js ezjs_idb lwt)
+ (libraries jsoo ezjs_idb lwt)
  (modes byte))
 
 (executable
  (name ui)
  (modules theme ui)
  (preprocess (pps ppx_deriving_jsoo))
- (libraries vue-jsoo idb api_js)
+ (libraries vue-jsoo idb api ez_api.ifetch_lwt)
  (modes js))

@@ -1,4 +1,5 @@
 open Types
+open Jsoo
 open Ezjs_min
 open Ezjs_idb
 
@@ -96,4 +97,4 @@ let update_config ~key db value =
 
 let remove_config ~key db =
   let st = ConfigStore.store ~mode:READWRITE db config in
-  ConfigStore.delete st (K key)
+  ConfigStore.(delete st (K key))

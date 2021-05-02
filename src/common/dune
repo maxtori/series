@@ -19,4 +19,4 @@
  (name api)
  (modules api)
  (preprocess (pps ez_api.ppx_client))
- (libraries types ez_api.icurl_lwt rp))
+ (libraries types ez_api.req_lwt rp))

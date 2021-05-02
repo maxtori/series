@@ -1,5 +1,5 @@
 (executable
  (name main)
  (modules main)
- (libraries api)
+ (libraries api ez_api.icurl_lwt)
  (modes byte))
