@@ -89,7 +89,7 @@
                         </b-button>
                       </b-col>
                     </b-row>
-                    <b-row v-if="s.episode.status!='future'" no-gutter>
+                    <b-row no-gutter>
                       <b-col cols="12" sm="6" class="d-flex justify-content-around my-2">
                         <b-button :variant="variant(s.episode)" :href="'https://2ddl.ms?q='+encodeURI(s.show.title)" target="_blank">2DDL</b-button>
                         <b-button :variant="variant(s.episode)" :href="'https://proxyrarbg.org/torrents.php?search='+encodeURI(s.show.title+'+'+s.episode.code)" target="_blank">RARBG</b-button>

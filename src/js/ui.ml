@@ -61,7 +61,7 @@ let variant _app e =
   let e = episode_of_jsoo e in
   if e.e_status = "out" then string "primary"
   else if e.e_status = "maybe" then string "info"
-  else string "secondary"
+  else string "outline-secondary"
 
 let update_show app s =
   let data = data_of_jsoo app in
