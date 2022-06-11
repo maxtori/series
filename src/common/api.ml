@@ -166,7 +166,8 @@ let episode_status now date =
   else "future"
 
 let format_filename s =
-  Str.global_replace (Str.regexp "<\\|>\\|:\\|\"\\|/\\|\\\\\\||\\|\\?\\|\\*") " " s
+  let s = Str.global_replace (Str.regexp ":") "," s in
+  Str.global_replace (Str.regexp "<\\|>\\|\"\\|/\\|\\\\\\||\\|\\?\\|\\*") " " s
 
 let format_show_title s =
   if String.get s (String.length s - 1) = ')' then

@@ -1,11 +1,10 @@
 all: build
 
 build:
-	@dune build src/common
-	@dune build src/unix/main.exe
-	@cp -uf _build/default/src/unix/main.exe bin/series.exe
-	@dune build --profile release src/js/ui.bc.js
-	@cp -uf _build/default/src/js/ui.bc.js www/series.js
+	@dune build --profile release
+	@mkdir -p _bin
+	@cp -f _build/default/src/unix/main.exe _bin/series
+	@cp -f _build/default/src/js/ui.bc.js www/series.js
 
 clean:
 	@dune clean

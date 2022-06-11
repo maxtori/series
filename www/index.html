@@ -7,7 +7,7 @@
 
     <link type="text/css" rel="stylesheet" href="bootstrap.css" />
     <link type="text/css" rel="stylesheet" href="https://unpkg.com/bootstrap-vue@latest/dist/bootstrap-vue.min.css" />
-    <script src="https://unpkg.com/vue@latest/dist/vue.js"></script>
+    <script src="https://unpkg.com/vue@2"></script>
     <script src="https://unpkg.com/bootstrap-vue@latest/dist/bootstrap-vue.min.js"></script>
     <script src="https://unpkg.com/bootstrap-vue@latest/dist/bootstrap-vue-icons.min.js"></script>
     <script src="series.js" defer></script>
@@ -51,7 +51,7 @@
           <b-form-input v-model="login.username" trim></b-form-input>
         </b-form-group>
         <b-form-group label="Password" :class="theme.text">
-          <b-form-input v-model="login.password" trim type="password"></b-form-input>
+          <b-form-input v-model="login.password" trim type="password" @keyup.enter="sign_in()"></b-form-input>
         </b-form-group>
         <div class="text-center">
           <b-button variant="primary" @click="sign_in()">Sign In</b-button>
@@ -68,7 +68,7 @@
               <b-col cols="4" sm="2" class="d-flex">
                 <b-card-img :src="s.show.images.poster" alt="poster" class="rounded-0" @error="set_outdated(s.show)" v-if="!s.show.outdated && s.show.images.poster!=undefined" style="object-fit: contain"></b-card-img>
                 <div v-else class="d-flex flex-fill justify-content-center">
-                  <b-button @click="update_show(s.show)" variant="secondary" class="align-self-center">
+                  <b-button @click="update_show(s.show, false)" variant="secondary" class="align-self-center">
                     <b-icon-arrow-clockwise></b-icon-arrow-clockwise>
                   </b-button>
                 </div>
@@ -91,8 +91,8 @@
                     </b-row>
                     <b-row no-gutter>
                       <b-col cols="12" sm="6" class="d-flex justify-content-around my-2">
-                        <b-button :variant="variant(s.episode)" :href="'https://2ddl.ms?q='+encodeURI(s.show.title)" target="_blank">2DDL</b-button>
-                        <b-button :variant="variant(s.episode)" :href="'https://proxyrarbg.org/torrents.php?search='+encodeURI(s.show.title+'+'+s.episode.code)" target="_blank">RARBG</b-button>
+                        <b-button :variant="variant(s.episode)" :href="'https://2ddl.it?q='+encodeURI(s.show.title)" target="_blank">2DDL</b-button>
+                        <b-button :variant="variant(s.episode)" :href="'https://rargb.to/search?search='+encodeURI(s.show.title+'+'+s.episode.code)" target="_blank">RARBG</b-button>
                         <div>
                           <b-button :variant="variant(s.episode)" :href="'https://animetosho.org/search?q='+encodeURI(s.show.title)" target="_blank" v-if="Object.keys(s.show.genres).includes('Animation')">ANIME</b-button>
                           <b-button :variant="variant(s.episode)" :href="'https://torrentgalaxy.mx/torrents.php?search='+encodeURI(s.show.title+'+'+s.episode.code)" target="_blank" v-else>TGX</b-button>
@@ -185,8 +185,11 @@
                   </b-row>
                   <div class="my-2 overflow-auto text-center" style="max-height: 75px">{{ serie.show.description }}</div>
                   <div class="text-center">
-                    <b-button variant="info" @click="update_show(serie.show)">Refresh</b-button>
-                    <b-button variant="danger" @click="remove_show(serie.show.id)" v-if="serie.show.in_account">Remove</b-button>
+                    <b-button variant="info" @click="update_show(serie.show, true)">Refresh</b-button>
+                    <span v-if="serie.show.in_account">
+                      <b-button variant="danger" @click="remove_show(serie.show.id)">Remove</b-button>
+                      <b-button variant="warning" @click="archive_show(serie.show.id)">Archive</b-button>
+                    </span>
                     <b-button variant="primary" @click="add_show(serie.show.id)" v-else>Add</b-button>
                   </div>
                 </b-card-body>
