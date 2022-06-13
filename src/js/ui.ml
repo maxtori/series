@@ -15,6 +15,13 @@ type login = {
   password : string; [@mutable]
 } [@@deriving jsoo]
 
+type links = {
+  rarbg: string;
+  twoddl: string;
+  tgx: string;
+  animetosho: string
+} [@@deriving jsoo]
+
 type data = {
   shows : episode_show list; [@mutable]
   db : Ezjs_idb.Types.iDBDatabase t; [@mutable] [@ignore]
@@ -25,6 +32,7 @@ type data = {
   theme : theme; [@mutable]
   serie : serie option; [@mutable]
   login : login; [@mutable]
+  links: links; [@mutable]
 } [@@deriving jsoo]
 
 module V = Vue_js.Make(struct
@@ -239,7 +247,7 @@ let route app path id =
     | "search" -> search app; []
     | "discover" -> discover app; []
     | "my_series" -> my_series app; []
-    | "login" -> []
+    | "login" | "settings" -> []
     | "serie" ->
       begin match Optdef.to_option id with
         | None -> home app; app##.path := string "home"; []
@@ -260,6 +268,13 @@ let sign_in app =
   Idb.update_config ~key:"token" app##.db auth.a_token;
   route app (string "home") undefined
 
+let update_links app =
+  let links = links_of_jsoo app##.links in
+  Idb.update_config ~key:"rarbg" app##.db links.rarbg;
+  Idb.update_config ~key:"2ddl" app##.db links.twoddl;
+  Idb.update_config ~key:"tgx" app##.db links.tgx;
+  Idb.update_config ~key:"animetosho" app##.db links.animetosho
+
 let () =
   V.add_method2 "copy" copy;
   V.add_method1 "downloaded" downloaded;
@@ -279,6 +294,7 @@ let () =
   V.add_method1 "route" route;
   V.add_method0 "sign_in" sign_in;
   V.add_method0 "sign_out" sign_out;
+  V.add_method0 "update_links" update_links;
   Idb.open_db @@ fun db ->
   Api.run (
     let@ theme = Idb.get_config ~key:"theme" db in
@@ -287,9 +303,18 @@ let () =
       | _ -> light_theme in
     let@ token = Idb.get_config ~key:"token" db in
     let login = {username=""; password=""} in
+    let@ rarbg = Idb.get_config ~key:"rarbg" db in
+    let rarbg = Option.value ~default:"https://rargb.to/search" rarbg in
+    let@ twoddl = Idb.get_config ~key:"2ddl" db in
+    let twoddl = Option.value ~default:"https://2ddl.it" twoddl in
+    let@ tgx = Idb.get_config ~key:"tgx" db in
+    let tgx = Option.value ~default:"https://torrentgalaxy.mx/torrents.php" tgx in
+    let@ animetosho = Idb.get_config ~key:"animetosho" db in
+    let animetosho = Option.value ~default:"https://animetosho.org/search" animetosho in
+    let links = {rarbg; twoddl; tgx; animetosho} in
     let data = {
       shows = []; token=(match token with None -> "" | Some t -> t);
-      db; path="home"; series = []; query=""; theme; serie = None; login } in
+      db; path="home"; series = []; query=""; theme; serie = None; login; links } in
     let app = V.init ~data:(data_to_jsoo data) ~export:true ~show:true () in
     let f () =
       let path, args = get_path () in

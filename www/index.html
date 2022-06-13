@@ -39,6 +39,9 @@
               <b-form-input v-model="query" @keyup.enter="route('search', undefined)"></b-form-input>
               <b-button variant="primary" @click="route('search', undefined)">Search</b-button>
             </b-input-group>
+            <b-nav-item :active="path=='settings'" @click="route('settings', undefined)" class="ml-3">
+              <b-icon icon="gear-fill" :variant="theme.icon_variant"></b-icon>
+            </b-nav-item>
             <b-nav-item @click="sign_out()" class="ml-3">
               <b-icon-lock-fill :variant="theme.icon_variant"></b-icon-lock-fill>
             </b-nav-item>
@@ -91,11 +94,11 @@
                     </b-row>
                     <b-row no-gutter>
                       <b-col cols="12" sm="6" class="d-flex justify-content-around my-2">
-                        <b-button :variant="variant(s.episode)" :href="'https://2ddl.it?q='+encodeURI(s.show.title)" target="_blank">2DDL</b-button>
-                        <b-button :variant="variant(s.episode)" :href="'https://rargb.to/search?search='+encodeURI(s.show.title+'+'+s.episode.code)" target="_blank">RARBG</b-button>
+                        <b-button :variant="variant(s.episode)" :href="links.twoddl+'?q='+encodeURI(s.show.title)" target="_blank">2DDL</b-button>
+                        <b-button :variant="variant(s.episode)" :href="links.rarbg+'?search='+encodeURI(s.show.title+'+'+s.episode.code)" target="_blank">RARBG</b-button>
                         <div>
-                          <b-button :variant="variant(s.episode)" :href="'https://animetosho.org/search?q='+encodeURI(s.show.title)" target="_blank" v-if="Object.keys(s.show.genres).includes('Animation')">ANIME</b-button>
-                          <b-button :variant="variant(s.episode)" :href="'https://torrentgalaxy.mx/torrents.php?search='+encodeURI(s.show.title+'+'+s.episode.code)" target="_blank" v-else>TGX</b-button>
+                          <b-button :variant="variant(s.episode)" :href="links.animetosho+'?q='+encodeURI(s.show.title)" target="_blank" v-if="Object.keys(s.show.genres).includes('Animation')">ANIME</b-button>
+                          <b-button :variant="variant(s.episode)" :href="links.tgx+'?search='+encodeURI(s.show.title+'+'+s.episode.code)" target="_blank" v-else>TGX</b-button>
                         </div>
                       </b-col>
                       <b-col cols="12" sm="6" class="d-flex justify-content-around my-2">
@@ -222,6 +225,32 @@
           </b-row>
         </div>
       </div>
+
+      <!-- SETTINGS -->
+
+      <b-container v-if="path=='settings'">
+
+        <b-card :bg-variant="theme.card_bg" :text-variant="theme.card_text" title="Links" class="text-center">
+          <b-input-group prepend="rarbg" class="m-2">
+            <b-form-input v-model="links.rarbg">
+            </b-form-input>
+          </b-input-group>
+          <b-input-group prepend="2ddl" class="m-2">
+            <b-form-input v-model="links.twoddl">
+            </b-form-input>
+          </b-input-group>
+          <b-input-group prepend="tgx" class="m-2">
+            <b-form-input v-model="links.tgx">
+            </b-form-input>
+          </b-input-group>
+          <b-input-group prepend="animetosho" class="m-2">
+            <b-form-input v-model="links.animetosho">
+            </b-form-input>
+          </b-input-group>
+          <b-button variant="primary" @click="update_links">Update</b-button>
+        </b-card>
+      </b-container>
+
     </div>
   </body>
 </html>
