@@ -33,6 +33,7 @@ type data = {
   serie : serie option; [@mutable]
   login : login; [@mutable]
   links: links; [@mutable]
+  resolution: string;
 } [@@deriving jsoo]
 
 module V = Vue_js.Make(struct
@@ -88,6 +89,9 @@ let serie app id =
     | Some season -> Lwt.return_ok (se_show, Some season) in
   let@! se_episodes = Api.get_show_episodes ~token:(to_string app##.token) ?season id in
   app##.serie := def (serie_to_jsoo {se_show; se_episodes; se_season=season})
+
+(* let search_title _app s =
+ *   string @@ Str.global_replace (Str.regexp " & ") " " (to_string s) *)
 
 let update_show app s reset =
   let data = data_of_jsoo app in
@@ -275,6 +279,9 @@ let update_links app =
   Idb.update_config ~key:"tgx" app##.db links.tgx;
   Idb.update_config ~key:"animetosho" app##.db links.animetosho
 
+let update_resolution app =
+  Idb.update_config ~key:"resolution" app##.db (to_string app##.resolution)
+
 let () =
   V.add_method2 "copy" copy;
   V.add_method1 "downloaded" downloaded;
@@ -295,6 +302,7 @@ let () =
   V.add_method0 "sign_in" sign_in;
   V.add_method0 "sign_out" sign_out;
   V.add_method0 "update_links" update_links;
+  V.add_method0 "update_resolution" update_resolution;
   Idb.open_db @@ fun db ->
   Api.run (
     let@ theme = Idb.get_config ~key:"theme" db in
@@ -304,7 +312,7 @@ let () =
     let@ token = Idb.get_config ~key:"token" db in
     let login = {username=""; password=""} in
     let@ rarbg = Idb.get_config ~key:"rarbg" db in
-    let rarbg = Option.value ~default:"https://rargb.to/search" rarbg in
+    let rarbg = Option.value ~default:"https://rarbgproxy.org/torrent.php" rarbg in
     let@ twoddl = Idb.get_config ~key:"2ddl" db in
     let twoddl = Option.value ~default:"https://2ddl.it" twoddl in
     let@ tgx = Idb.get_config ~key:"tgx" db in
@@ -312,9 +320,12 @@ let () =
     let@ animetosho = Idb.get_config ~key:"animetosho" db in
     let animetosho = Option.value ~default:"https://animetosho.org/search" animetosho in
     let links = {rarbg; twoddl; tgx; animetosho} in
+    let@ resolution = Idb.get_config ~key:"resolution" db in
+    let resolution = Option.value ~default:"" resolution in
     let data = {
       shows = []; token=(match token with None -> "" | Some t -> t);
-      db; path="home"; series = []; query=""; theme; serie = None; login; links } in
+      db; path="home"; series = []; query=""; theme; serie = None; login; links;
+      resolution } in
     let app = V.init ~data:(data_to_jsoo data) ~export:true ~show:true () in
     let f () =
       let path, args = get_path () in

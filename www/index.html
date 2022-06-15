@@ -94,11 +94,11 @@
                     </b-row>
                     <b-row no-gutter>
                       <b-col cols="12" sm="6" class="d-flex justify-content-around my-2">
-                        <b-button :variant="variant(s.episode)" :href="links.twoddl+'?q='+encodeURI(s.show.title)" target="_blank">2DDL</b-button>
-                        <b-button :variant="variant(s.episode)" :href="links.rarbg+'?search='+encodeURI(s.show.title+'+'+s.episode.code)" target="_blank">RARBG</b-button>
+                        <b-button :variant="variant(s.episode)" :href="links.twoddl+'?q='+encodeURIComponent(s.show.title)" target="_blank">2DDL</b-button>
+                        <b-button :variant="variant(s.episode)" :href="links.rarbg+'?search='+encodeURIComponent(s.show.title)+'+'+s.episode.code+resolution" target="_blank">RARBG</b-button>
                         <div>
-                          <b-button :variant="variant(s.episode)" :href="links.animetosho+'?q='+encodeURI(s.show.title)" target="_blank" v-if="Object.keys(s.show.genres).includes('Animation')">ANIME</b-button>
-                          <b-button :variant="variant(s.episode)" :href="links.tgx+'?search='+encodeURI(s.show.title+'+'+s.episode.code)" target="_blank" v-else>TGX</b-button>
+                          <b-button :variant="variant(s.episode)" :href="links.animetosho+'?q='+encodeURIComponent(s.show.title)+resolution" target="_blank" v-if="Object.keys(s.show.genres).includes('Animation')">ANIME</b-button>
+                          <b-button :variant="variant(s.episode)" :href="links.tgx+'?search='+encodeURIComponent(s.show.title)+'+'+s.episode.code+resolution" target="_blank" v-else>TGX</b-button>
                         </div>
                       </b-col>
                       <b-col cols="12" sm="6" class="d-flex justify-content-around my-2">
@@ -247,7 +247,11 @@
             <b-form-input v-model="links.animetosho">
             </b-form-input>
           </b-input-group>
-          <b-button variant="primary" @click="update_links">Update</b-button>
+          <b-button variant="primary" @click="update_links()">Update</b-button>
+        </b-card>
+
+        <b-card :bg-variant="theme.card_bg" :text-variant="theme.card_text" title="Resolution" class="text-center">
+          <b-form-select :options="[{value:'', text:''}, {value:'+720p', text:'720p'}, {value:'+1080p', text:'1080p'}, {value:'+2160p', text:'2160p'}]" v-model="resolution" @change="update_resolution()"></b-form-select>
         </b-card>
       </b-container>
 

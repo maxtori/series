@@ -1,3 +1,5 @@
+(env (_ (flags (:standard -w -34))))
+
 (rule
  (deps ../common/types.ml)
  (targets jsoo.ml)
