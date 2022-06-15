@@ -87,7 +87,7 @@
                       <b-col cols="4" class="text-center">{{ s.episode.title }}</b-col>
                       <b-col cols="3">{{ s.episode.date.toLocaleDateString("fr-FR") }}</b-col>
                       <b-col cols="2">
-                        <b-button @click="copy(s.show, s.episode)" :variant="'outline-'+theme.btn_outline">
+                        <b-button @click="copy(s.show, s.episode)" :variant="'outline-'+theme.btn_outline" :title="copy_message" v-b-tooltip.hover>
                           <b-icon-clipboard/>
                         </b-button>
                       </b-col>
@@ -211,11 +211,16 @@
           <b-row no-gutters v-for="e in serie.episodes" :key="e.id" class="text-center">
             <b-col cols="2">{{ e.date.toLocaleDateString("fr-FR") }}</b-col>
             <b-col cols="2">{{ e.code_fmt }}</b-col>
-            <b-col cols="6">{{ e.title }}</b-col>
+            <b-col cols="5">{{ e.title }}</b-col>
             <b-col cols="1">
-              <b-button @click="copy(serie.show, e)" :variant="'outline-'+theme.btn_outline">
+              <b-button @click="copy(serie.show, e)" :variant="'outline-'+theme.btn_outline" :title="copy_message" v-b-tooltip.hover.left>
                 <b-icon-clipboard/>
               </b-button>
+            </b-col>
+            <b-col cols="1">
+              <b-form-checkbox v-model="e.user.downloaded" @input="downloaded(e)" button :button-variant="e.user.downloaded ? 'success' : 'outline-secondary'">
+                <b-icon-download></b-icon-download>
+              </b-form-checkbox>
             </b-col>
             <b-col cols="1">
               <b-form-checkbox v-model="e.user.seen" @input="watched(e)" button :button-variant="e.user.seen ? 'success' : 'outline-secondary'">

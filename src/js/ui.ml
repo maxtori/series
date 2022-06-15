@@ -33,7 +33,8 @@ type data = {
   serie : serie option; [@mutable]
   login : login; [@mutable]
   links: links; [@mutable]
-  resolution: string;
+  resolution: string; [@mutable]
+  copy_message: string; [@mutable]
 } [@@deriving jsoo]
 
 module V = Vue_js.Make(struct
@@ -42,12 +43,17 @@ module V = Vue_js.Make(struct
     let id = "app"
   end)
 
-let copy _app show e =
+let copy app show e =
   let show = show_of_jsoo show in
   let e = episode_of_jsoo e in
   let s = string @@ Format.sprintf "%s - %s - %s"
       (Api.format_show_title show.s_title) e.e_code_fmt (Api.format_filename e.e_title) in
-  ignore @@ Unsafe.global##.self##.navigator##.clipboard##writeText s
+  ignore @@ Unsafe.global##.self##.navigator##.clipboard##writeText s;
+  app##.copy_message_ := string "copied!";
+  Api.run @@
+  let>! () = EzLwtSys.sleep 2. in
+  app##.copy_message_ := string "copy";
+  Ok ()
 
 let locked = ref false
 
@@ -325,7 +331,7 @@ let () =
     let data = {
       shows = []; token=(match token with None -> "" | Some t -> t);
       db; path="home"; series = []; query=""; theme; serie = None; login; links;
-      resolution } in
+      resolution; copy_message = "copy" } in
     let app = V.init ~data:(data_to_jsoo data) ~export:true ~show:true () in
     let f () =
       let path, args = get_path () in
