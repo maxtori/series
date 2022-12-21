@@ -22,62 +22,41 @@ type links = {
   animetosho: string
 } [@@deriving jsoo]
 
-type data = {
-  shows : episode_show list; [@mutable]
-  db : Ezjs_idb.Types.iDBDatabase t; [@mutable] [@ignore]
-  token : string; [@mutable]
-  path : string; [@mutable]
-  query : string; [@mutable]
-  series : show list; [@mutable]
-  theme : theme; [@mutable]
-  serie : serie option; [@mutable]
-  login : login; [@mutable]
-  links: links; [@mutable]
-  resolution: string; [@mutable]
-  copy_message: string; [@mutable]
-} [@@deriving jsoo]
+module CopyButton = struct
 
-module V = Vue_js.Make(struct
-    class type data = data_jsoo
-    class type all = data_jsoo
-    let id = "app"
-  end)
+  let%prop tx = "light"
+  and show : show = {req}
+  and episode : episode = {req}
+  and placement = "top"
 
-let copy app show e =
-  let show = show_of_jsoo show in
-  let e = episode_of_jsoo e in
-  let s = string @@ Format.sprintf "%s - %s - %s"
-      (Api.format_show_title show.s_title) e.e_code_fmt (Api.format_filename e.e_title) in
-  ignore @@ Unsafe.global##.self##.navigator##.clipboard##writeText s;
-  app##.copy_message_ := string "copied!";
-  Api.run @@
-  let>! () = EzLwtSys.sleep 2. in
-  app##.copy_message_ := string "copy";
-  Ok ()
+  let%meth copy app =
+    let tp = Unsafe.global##.bootstrap##._Tooltip##getInstance [%el app] in
+    let s = string @@ Format.sprintf "%s - %s - %s"
+        (Api.format_show_title (to_string app##.show##.title)) (to_string app##.episode##.code_fmt_)
+        (Api.format_filename @@ to_string app##.episode##.title) in
+    ignore @@ Unsafe.global##.self##.navigator##.clipboard##writeText s;
+    match Opt.to_option tp with
+    | None -> ()
+    | Some tp ->
+      ignore @@ tp##setContent (Unsafe.obj [| ".tooltip-inner", Unsafe.inject (string "copied!") |])
+
+  [%%mounted fun app ->
+    let cs : _ constr = Unsafe.global##.bootstrap##._Tooltip in
+    let _ = new%js cs [%el app] in
+    ()]
+
+  [%%comp {conv}]
+
+  {%%template|
+  <button @click="copy()" :class="'btn btn-outline-'+tx" data-bs-toggle="tooltip" :data-bs-placement="placement" data-bs-trigger="hover" data-bs-title="copy" data-bs-container="#app">
+    <i class="bi bi-clipboard"></i>
+  </button>
+  |}
+end
 
 let locked = ref false
 
-let downloaded app e =
-  if not !locked then
-    let e = episode_of_jsoo e in
-    Api.run @@
-    let@! _ = Api.downloaded ~token:(to_string app##.token) e.e_id e.e_user.eu_downloaded in
-    ()
-
-let watched app e =
-  if not !locked then
-    let e = episode_of_jsoo e in
-    Api.run @@
-    let@! _ = Api.watched ~token:(to_string app##.token) e.e_id e.e_user.eu_seen in
-    ()
-
-let variant _app e =
-  let e = episode_of_jsoo e in
-  if e.e_status = "out" then string "primary"
-  else if e.e_status = "maybe" then string "info"
-  else string "outline-secondary"
-
-let serie app id =
+let serie (app: all t) (id: int) =
   Api.run @@
   let@ show = Idb.get_show app##.db id in
   let@ se_show = match show with
@@ -96,139 +75,9 @@ let serie app id =
   let@! se_episodes = Api.get_show_episodes ~token:(to_string app##.token) ?season id in
   app##.serie := def (serie_to_jsoo {se_show; se_episodes; se_season=season})
 
-(* let search_title _app s =
- *   string @@ Str.global_replace (Str.regexp " & ") " " (to_string s) *)
-
-let update_show app s reset =
-  let data = data_of_jsoo app in
-  let s = show_of_jsoo s in
-  Api.run @@
-  let@! s2 = Api.get_show ~token:data.token s.s_id in
-  let es_show = {s2 with s_title = s.s_title; s_outdated = false} in
-  Idb.put_show app##.db s.s_id es_show;
-  List.iteri
-    (fun i ss ->
-       if ss.es_show.s_id = s.s_id then
-         ignore @@ app##.shows##splice_1 i 1 (episode_show_to_jsoo {ss with es_show}))
-    data.shows;
-  if to_bool reset then serie app s.s_id else ()
-
-let update_shows app =
-  let shows = to_listf episode_show_of_jsoo app##.shows in
-  List.iter (fun s -> if s.es_show.s_outdated then update_show app (show_to_jsoo s.es_show) _false) shows
-
-let set_outdated _app s =
-  s##.outdated := _true
-
-let refresh_episode app id =
-  locked := true;
-  let data = data_of_jsoo app in
-  Api.run @@
-  let@ new_shows = Api.get_unseen ~store:(Idb.manage_show app##.db) ~id data.token in
-  match new_shows with
-  | [] ->
-    let shows = of_listf episode_show_to_jsoo @@
-      List.filter (fun s -> s.es_show.s_id <> id) data.shows in
-    app##.shows := shows;
-    Lwt.map (fun () -> locked := false; Ok ()) (EzLwtSys.sleep 1.)
-  | {es_episode; _} :: _ ->
-    List.iteri
-      (fun i s -> if s.es_show.s_id = id then
-          ignore @@ app##.shows##splice_1 i 1 (episode_show_to_jsoo {s with es_episode}))
-      data.shows;
-    Lwt.map (fun () -> locked := false; Ok ()) (EzLwtSys.sleep 1.)
-
-let search app =
-  app##.series := of_list [];
-  Api.run @@
-  let@! searches = Api.search_shows ~token:(to_string app##.token) (to_string app##.query) in
-  app##.series := of_listf show_to_jsoo searches
-
-let add_show app id =
-  let data = data_of_jsoo app in
-  Api.run @@
-  let@! r = Api.add_show ~token:data.token id in
-  Idb.add_show app##.db r.s_id r;
-  List.iteri
-    (fun i s -> if s.s_id = id then
-        ignore @@ app##.series##splice_1 i 1 (show_to_jsoo r))
-    data.series
-
-let remove_show app id =
-  let data = data_of_jsoo app in
-  Idb.remove_show app##.db id;
-  Api.run @@
-  let@! r = Api.remove_show ~token:data.token id in
-  List.iteri
-    (fun i s -> if s.s_id = id then
-        ignore @@ app##.series##splice_1 i 1 (show_to_jsoo r))
-    data.series
-
-let archive_show app id =
-  let data = data_of_jsoo app in
-  Api.run @@
-  let@! r = Api.archive_show ~token:data.token id in
-  List.iteri
-    (fun i s -> if s.s_id = id then
-        ignore @@ app##.series##splice_1 i 1 (show_to_jsoo r))
-    data.series
-
-let unarchive_show app id =
-  let data = data_of_jsoo app in
-  Api.run @@
-  let@! r = Api.unarchive_show ~token:data.token id in
-  List.iteri
-    (fun i s -> if s.s_id = id then
-        ignore @@ app##.series##splice_1 i 1 (show_to_jsoo r))
-    data.series
-
-let discover app =
-  app##.series := of_list [];
-  Api.run @@
-  let@! series = Api.discover ~token:(to_string app##.token) () in
-  app##.series := of_listf show_to_jsoo series
-
 let set_body_class = function
   | None -> Dom_html.document##.body##removeAttribute (string "class")
   | Some c -> Dom_html.document##.body##setAttribute (string "class") (string c)
-
-let switch_theme app =
-  let theme, s = if app##.theme##.body = undefined then dark_theme, "dark" else light_theme, "light" in
-  app##.theme := theme_to_jsoo theme;
-  set_body_class theme.t_body;
-  Idb.update_config ~key:"theme" app##.db s
-
-let update_episodes app season =
-  let serie = to_optdef serie_of_jsoo app##.serie in
-  match serie with
-  | None -> ()
-  | Some serie ->
-    Api.run @@
-    let@! se_episodes = Api.get_show_episodes ~token:(to_string app##.token) ~season serie.se_show.s_id in
-    match Optdef.to_option app##.serie with
-    | None -> ()
-    | Some serie ->
-      serie##.season := def season;
-      serie##.episodes := of_listf episode_to_jsoo se_episodes
-
-let change_title (app : data_jsoo t) s =
-  match Optdef.to_option app##.serie with
-  | None -> ()
-  | Some serie ->
-    serie##.show##.title := s;
-    let show = show_of_jsoo serie##.show in
-    Idb.put_show app##.db show.s_id {show with s_title = to_string s}
-
-let home app =
-  Api.run @@
-  let@! shows = Api.get_unseen ~store:(Idb.manage_show app##.db) (to_string app##.token) in
-  app##.shows := of_listf episode_show_to_jsoo shows
-
-let my_series app =
-  app##.series := of_list [];
-  Api.run @@
-  let@! series = Api.my_shows (to_string app##.token) in
-  app##.series := of_listf show_to_jsoo series
 
 let file_path = ref false
 
@@ -250,7 +99,158 @@ let set_path ?(scroll=true) ?(args=[]) s =
     Dom_html.window##.history##pushState path (string "") path;
     if scroll then Dom_html.window##scroll 0 0
 
-let route app path id =
+let%meth copy _app (show: show) (e: episode) (id : int) =
+  let tp = Unsafe.global##.bootstrap##._Tooltip##getInstance (string ("#copy-" ^ string_of_int id)) in
+  let s = string @@ Format.sprintf "%s - %s - %s"
+      (Api.format_show_title show.s_title) e.e_code_fmt (Api.format_filename e.e_title) in
+  ignore @@ Unsafe.global##.self##.navigator##.clipboard##writeText s;
+  match Opt.to_option tp with
+  | None -> ()
+  | Some tp ->
+    ignore @@ tp##setContent (Unsafe.obj [| ".tooltip-inner", Unsafe.inject (string "copied!") |])
+
+and downloaded app (e: episode_jsoo t) =
+  if not !locked then
+    Api.run @@
+    let b = not (to_bool e##.user##.downloaded) in
+    let@! _ = Api.downloaded ~token:(to_string app##.token) e##.id b in
+    e##.user##.downloaded := bool b
+[@@noconv]
+
+and watched app (e: episode_jsoo t) =
+  if not !locked then
+    Api.run @@
+    let b = not (to_bool e##.user##.seen) in
+    let@! _ = Api.watched ~token:(to_string app##.token) e##.id b in
+    e##.user##.seen := bool b
+[@@noconv]
+
+and variant _app (e: episode) : string =
+  if e.e_status = "out" then "primary"
+  else if e.e_status = "maybe" then "info"
+  else "outline-secondary"
+
+let%meth rec update_show app (s: show) (reset: bool) =
+  Api.run @@
+  let@! s2 = Api.get_show ~token:(to_string app##.token) s.s_id in
+  let es_show = {s2 with s_title = s.s_title; s_outdated = false} in
+  Idb.put_show app##.db s.s_id es_show;
+  List.iteri
+    (fun i ss ->
+       if ss.es_show.s_id = s.s_id then
+         ignore @@ app##.shows##splice_1 i 1 (episode_show_to_jsoo {ss with es_show}))
+    (to_listf episode_show_of_jsoo app##.shows);
+  if reset then serie app s.s_id else ()
+
+and update_shows app =
+  let shows = to_listf episode_show_of_jsoo app##.shows in
+  List.iter (fun s -> if s.es_show.s_outdated then update_show app s.es_show false) shows
+
+let%meth set_outdated _app (s: show_jsoo t) =
+  s##.outdated := _true [@@noconv]
+
+and refresh_episode app (id: int) =
+  locked := true;
+  Api.run @@
+  let@ new_shows = Api.get_unseen ~store:(Idb.manage_show app##.db) ~id (to_string app##.token) in
+  match new_shows with
+  | [] ->
+    let shows = of_listf episode_show_to_jsoo @@
+      List.filter (fun s -> s.es_show.s_id <> id) (to_listf episode_show_of_jsoo app##.shows) in
+    app##.shows := shows;
+    Lwt.map (fun () -> locked := false; Ok ()) (EzLwtSys.sleep 1.)
+  | {es_episode; _} :: _ ->
+    List.iteri
+      (fun i s -> if s.es_show.s_id = id then
+          ignore @@ app##.shows##splice_1 i 1 (episode_show_to_jsoo {s with es_episode}))
+      (to_listf episode_show_of_jsoo app##.shows);
+    Lwt.map (fun () -> locked := false; Ok ()) (EzLwtSys.sleep 1.)
+
+and add_show app (id: int) =
+  Api.run @@
+  let@! r = Api.add_show ~token:(to_string app##.token) id in
+  Idb.add_show app##.db r.s_id r;
+  List.iteri
+    (fun i s -> if s.s_id = id then
+        ignore @@ app##.series##splice_1 i 1 (show_to_jsoo r))
+    (to_listf show_of_jsoo app##.series)
+
+and remove_show app (id: int) =
+  Idb.remove_show app##.db id;
+  Api.run @@
+  let@! r = Api.remove_show ~token:(to_string app##.token) id in
+  List.iteri
+    (fun i s -> if s.s_id = id then
+        ignore @@ app##.series##splice_1 i 1 (show_to_jsoo r))
+    (to_listf show_of_jsoo app##.series)
+
+and archive_show app (id: int) =
+  Api.run @@
+  let@! r = Api.archive_show ~token:(to_string app##.token) id in
+  List.iteri
+    (fun i s -> if s.s_id = id then
+        ignore @@ app##.series##splice_1 i 1 (show_to_jsoo r))
+    (to_listf show_of_jsoo app##.series)
+
+and unarchive_show app (id: int) =
+  Api.run @@
+  let@! r = Api.unarchive_show ~token:(to_string app##.token) id in
+  List.iteri
+    (fun i s -> if s.s_id = id then
+        ignore @@ app##.series##splice_1 i 1 (show_to_jsoo r))
+    (to_listf show_of_jsoo app##.series)
+
+and switch_theme app : unit =
+  let theme, s = if app##.theme##.bg = string "light" then dark_theme, "dark" else light_theme, "light" in
+  app##.theme := theme_to_jsoo theme;
+  set_body_class (Some ("bg-" ^ theme.t_bg));
+  Idb.update_config ~key:"theme" app##.db s
+
+and update_episodes app (season: int) =
+  let serie = to_optdef serie_of_jsoo app##.serie in
+  match serie with
+  | None -> ()
+  | Some serie ->
+    Api.run @@
+    let@! se_episodes = Api.get_show_episodes ~token:(to_string app##.token) ~season serie.se_show.s_id in
+    match Optdef.to_option app##.serie with
+    | None -> ()
+    | Some serie ->
+      serie##.season := def season;
+      serie##.episodes := of_listf episode_to_jsoo se_episodes
+
+and change_title app (s: js_string t) : unit =
+  match Optdef.to_option app##.serie with
+  | None -> ()
+  | Some serie ->
+    serie##.show##.title := s;
+    let show = show_of_jsoo serie##.show in
+    Idb.put_show app##.db show.s_id {show with s_title = to_string s} [@@noconv]
+
+let search (app: all t) =
+  app##.series := of_list [];
+  Api.run @@
+  let@! searches = Api.search_shows ~token:(to_string app##.token) (to_string app##.query) in
+  app##.series := of_listf show_to_jsoo searches
+
+let discover (app: all t) =
+  app##.series := of_list [];
+  Api.run @@
+  let@! series = Api.discover ~token:(to_string app##.token) () in
+  app##.series := of_listf show_to_jsoo series
+
+let my_series (app: all t) =
+  app##.series := of_list [];
+  Api.run @@
+  let@! series = Api.my_shows (to_string app##.token) in
+  app##.series := of_listf show_to_jsoo series
+
+let home (app: all t) =
+  Api.run @@
+  let@! shows = Api.get_unseen ~store:(Idb.manage_show app##.db) (to_string app##.token) in
+  app##.shows := of_listf episode_show_to_jsoo shows
+
+let%meth route app path id =
   app##.path := path;
   let path = to_string path in
   let args = match path with
@@ -266,11 +266,11 @@ let route app path id =
     | _ -> home app; app##.path := string "home"; [] in
   set_path ~args path
 
-let sign_out app =
+let%meth sign_out app =
   Idb.remove_config ~key:"token" app##.db;
   route app (string "login") undefined
 
-let sign_in app =
+and sign_in app =
   let login = login_of_jsoo app##.login in
   Api.run @@
   let@! auth = Api.request_token ~login:login.username ~password:login.password in
@@ -278,37 +278,34 @@ let sign_in app =
   Idb.update_config ~key:"token" app##.db auth.a_token;
   route app (string "home") undefined
 
-let update_links app =
+and update_links app : unit =
   let links = links_of_jsoo app##.links in
   Idb.update_config ~key:"rarbg" app##.db links.rarbg;
   Idb.update_config ~key:"2ddl" app##.db links.twoddl;
   Idb.update_config ~key:"tgx" app##.db links.tgx;
   Idb.update_config ~key:"animetosho" app##.db links.animetosho
 
-let update_resolution app =
+and update_resolution app : unit =
   Idb.update_config ~key:"resolution" app##.db (to_string app##.resolution)
 
+[%%mounted (fun app ->
+    let f () =
+      let path, args = get_path () in
+      let id = optdef int_of_string @@ List.assoc_opt "id" args in
+      route app (string path) id in
+    Dom_html.window##.onpopstate := Dom_html.handler (fun _e -> f (); _true);
+    match to_string app##.token with
+    | "" -> Lwt.return_ok @@ route app (string "login") undefined
+    | token ->
+      let>+ active = Api.active_token token in
+      if active then (
+        app##.token := string token;
+        f ())
+      else (
+        Idb.remove_config ~key:"token" app##.db;
+        route app (string "login") undefined))]
+
 let () =
-  V.add_method2 "copy" copy;
-  V.add_method1 "downloaded" downloaded;
-  V.add_method1 "watched" watched;
-  V.add_method1 "variant" variant;
-  V.add_method2 "update_show" update_show;
-  V.add_method0 "update_shows" update_shows;
-  V.add_method1 "set_outdated" set_outdated;
-  V.add_method1 "refresh_episode" refresh_episode;
-  V.add_method1 "add_show" add_show;
-  V.add_method1 "remove_show" remove_show;
-  V.add_method1 "archive_show" archive_show;
-  V.add_method1 "unarchive_show" unarchive_show;
-  V.add_method0 "switch_theme" switch_theme;
-  V.add_method1 "update_episodes" update_episodes;
-  V.add_method1 "change_title" change_title;
-  V.add_method1 "route" route;
-  V.add_method0 "sign_in" sign_in;
-  V.add_method0 "sign_out" sign_out;
-  V.add_method0 "update_links" update_links;
-  V.add_method0 "update_resolution" update_resolution;
   Idb.open_db @@ fun db ->
   Api.run (
     let@ theme = Idb.get_config ~key:"theme" db in
@@ -316,7 +313,6 @@ let () =
       | Some "dark" -> set_body_class @@ Some "bg-dark"; dark_theme
       | _ -> light_theme in
     let@ token = Idb.get_config ~key:"token" db in
-    let login = {username=""; password=""} in
     let@ rarbg = Idb.get_config ~key:"rarbg" db in
     let rarbg = Option.value ~default:"https://rarbgproxy.org/torrent.php" rarbg in
     let@ twoddl = Idb.get_config ~key:"2ddl" db in
@@ -328,23 +324,18 @@ let () =
     let links = {rarbg; twoddl; tgx; animetosho} in
     let@ resolution = Idb.get_config ~key:"resolution" db in
     let resolution = Option.value ~default:"" resolution in
-    let data = {
-      shows = []; token=(match token with None -> "" | Some t -> t);
-      db; path="home"; series = []; query=""; theme; serie = None; login; links;
-      resolution; copy_message = "copy" } in
-    let app = V.init ~data:(data_to_jsoo data) ~export:true ~show:true () in
-    let f () =
-      let path, args = get_path () in
-      let id = optdef int_of_string @@ List.assoc_opt "id" args in
-      route app (string path) id in
-    Dom_html.window##.onpopstate := Dom_html.handler (fun _e -> f (); _true);
-    match token with
-    | None -> Lwt.return_ok @@ route app (string "login") undefined
-    | Some token ->
-      let>+ active = Api.active_token token in
-      if active then (
-        app##.token := string token;
-        f ())
-      else (
-        Idb.remove_config ~key:"token" db;
-        route app (string "login") undefined))
+
+    let%data shows : episode_show list = []
+    and db : Ezjs_idb.Types.iDBDatabase t = db [@@noconv]
+    and token : string = Option.value ~default:"" token
+    and path = "home"
+    and query = ""
+    and series : show list = []
+    and theme : theme = theme
+    and serie : serie option = None
+    and login : login = {username=""; password=""}
+    and links : links = links
+    and resolution = resolution
+    and copy_message = "copy" in
+    let _app = [%app {conv; types; mount; unhide; export; components=[CopyButton]}] in
+    Lwt.return_ok ())

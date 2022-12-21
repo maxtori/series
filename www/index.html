@@ -4,261 +4,290 @@
     <title>Series</title>
     <meta charset="utf-8">
     <link rel="icon" href="series_192.png">
-
-    <link type="text/css" rel="stylesheet" href="bootstrap.css" />
-    <link type="text/css" rel="stylesheet" href="https://unpkg.com/bootstrap-vue@latest/dist/bootstrap-vue.min.css" />
-    <script src="https://unpkg.com/vue@2"></script>
-    <script src="https://unpkg.com/bootstrap-vue@latest/dist/bootstrap-vue.min.js"></script>
-    <script src="https://unpkg.com/bootstrap-vue@latest/dist/bootstrap-vue-icons.min.js"></script>
+    <link rel="stylesheet" href="bootstrap.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/vue"></script>
     <script src="series.js" defer></script>
   </head>
   <body>
     <div id="app-loading" style="height:100vh"></div>
-    <div id="app" class="pb-5">
+    <div id="app" style="display: none">
 
       <!-- NAVBAR -->
 
-      <b-navbar sticky toggleable="sm" :type="theme.navbar_type" :variant="theme.navbar_variant">
-        <b-navbar-brand @click="route('home', undefined)">
-          <img src="series_192.png" alt="Logo" style="width:40px;">
-        </b-navbar-brand>
-        <b-navbar-toggle target="nav-collapse"></b-navbar-toggle>
-        <b-collapse id="nav-collapse" is-nav>
-          <b-navbar-nav>
-            <b-nav-item :active="path=='my_series'" @click="route('my_series', undefined)">My Series</b-nav-item>
-            <b-nav-item :active="path=='discover'" @click="route('discover', undefined)">Discover</b-nav-item>
-          </b-navbar-nav>
-          <b-navbar-nav class="ml-auto">
-            <b-nav-item @click="update_shows()" class="mr-3" v-if="path=='home'">
-              <b-icon-arrow-clockwise></b-icon-arrow-clockwise>
-            </b-nav-item>
-            <b-nav-item @click="switch_theme()" class="mr-3">
-              <b-icon :icon="theme.icon" :variant="theme.icon_variant"></b-icon>
-            </b-nav-item>
-            <b-input-group>
-              <b-form-input v-model="query" @keyup.enter="route('search', undefined)"></b-form-input>
-              <b-button variant="primary" @click="route('search', undefined)">Search</b-button>
-            </b-input-group>
-            <b-nav-item :active="path=='settings'" @click="route('settings', undefined)" class="ml-3">
-              <b-icon icon="gear-fill" :variant="theme.icon_variant"></b-icon>
-            </b-nav-item>
-            <b-nav-item @click="sign_out()" class="ml-3">
-              <b-icon-lock-fill :variant="theme.icon_variant"></b-icon-lock-fill>
-            </b-nav-item>
-          </b-navbar-nav>
-        </b-collapse>
-      </b-navbar>
-
-      <b-container v-if="path=='login'">
-        <b-form-group label="Username" :class="theme.text">
-          <b-form-input v-model="login.username" trim></b-form-input>
-        </b-form-group>
-        <b-form-group label="Password" :class="theme.text">
-          <b-form-input v-model="login.password" trim type="password" @keyup.enter="sign_in()"></b-form-input>
-        </b-form-group>
-        <div class="text-center">
-          <b-button variant="primary" @click="sign_in()">Sign In</b-button>
+      <div class="navbar navbar-expand-sm sticky-top" :class="'bg-'+theme.bg+' '+theme.navbar">
+        <div class="container-fluid">
+          <div class="navbar-brand" @click="route('home', undefined)" role="button">
+            <img src="series_192.png" alt="Logo" style="width:40px;">
+          </div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav-collapse">
+            <span class="navbar-toggler-icon"></span>
+          </button>
+          <div class="collapse navbar-collapse" id="nav-collapse">
+            <ul class="navbar-nav">
+              <li class="nav-item">
+                <a class="nav-link" :class="(path=='my_series') ? 'active' : ''" @click="route('my_series', undefined)" role="button">My Series</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" :class="(path=='discover') ? 'active' : ''" @click="route('discover', undefined)" role="button">Discover</a>
+              </li>
+            </ul>
+            <ul class="navbar-nav ms-auto">
+              <li class="nav-item">
+                <a class="nav-link me-3" @click="update_shows()" v-if="path=='home'" role="button">
+                  <i class="bi bi-arrow-clockwise"></i>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link me-3" @click="switch_theme()" role="button">
+                  <i :class="'bi bi-'+theme.icon+' text-'+theme.icon_variant"></i>
+                </a>
+              </li>
+              <div class="input-group">
+                <input class="form-control" v-model="query" @keyup.enter="route('search', undefined)">
+                <button class="btn btn-primary" @click="route('search', undefined)">Search</button>
+              </div>
+              <li class="nav-item">
+                <a class="nav-link ms-3" :class="(path=='settings') ? 'active' : ''" @click="route('settings', undefined)" role="button">
+                  <i class="bi bi-gear-fill"></i>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link ms-3" @click="sign_out()" role="button">
+                  <i :class="'bi bi-lock-fill text-'+theme.icon_variant"></i>
+                </a>
+              </li>
+            </ul>
+          </div>
         </div>
+      </div>
 
-      </b-container>
+      <div class="container" v-if="path=='login'">
+        <div>
+          <label :class="'text-'+theme.tx">Username</label>
+          <input class="form-control" :class="'text-'+theme.tx" v-model.trim="login.username">
+        </div>
+        <div>
+          <label :class="'text-'+theme.tx">Password</label>
+          <input class="form-control" :class="'text-'+theme.tx" v-model.trim="login.password" type="password" @keyup.enter="sign_in()">
+        </div>
+        <div class="text-center">
+          <button class="btn btn-primary" @click="sign_in()">Sign In</button>
+        </div>
+      </div>
 
       <!-- HOME -->
 
-      <b-row no-gutters v-if="path=='home'">
-        <b-col cols="12" xl="6" v-for="s in shows" class="d-flex" :key="s.show.id">
-          <b-card no-body class="flex-fill" :bg-variant="theme.card_bg" :text-variant="theme.card_text">
-            <b-row no-gutters>
-              <b-col cols="4" sm="2" class="d-flex">
-                <b-card-img :src="s.show.images.poster" alt="poster" class="rounded-0" @error="set_outdated(s.show)" v-if="!s.show.outdated && s.show.images.poster!=undefined" style="object-fit: contain"></b-card-img>
+      <div class="row g-0" v-if="path=='home'">
+        <div class="col-12 col-xl-6 d-flex" v-for="s in shows" :key="s.show.id">
+          <div class="card flex-fill" :class="'text-bg-'+theme.bg">
+            <div class="row g-0">
+              <div class="col-4 col-sm-2 d-flex">
+                <img class="card-img-top" :src="s.show.images.poster" alt="poster" class="rounded-0" @error="set_outdated(s.show)" v-if="!s.show.outdated && s.show.images.poster!=undefined" style="object-fit: contain" loading="lazy">
                 <div v-else class="d-flex flex-fill justify-content-center">
-                  <b-button @click="update_show(s.show, false)" variant="secondary" class="align-self-center">
-                    <b-icon-arrow-clockwise></b-icon-arrow-clockwise>
-                  </b-button>
+                  <button @click="update_show(s.show, false)" class="btn btn-secondary align-self-center">
+                    <i class="bi bi-arrow-clockwise"></i>
+                  </button>
                 </div>
-              </b-col>
-              <b-col cols="8" sm="10" class="d-flex">
-                <b-card-body class="d-flex flex-column justify-content-between">
-                  <b-card-title>
-                    <b-button @click="route('serie', s.show.id)" variant="link" size="lg">{{ s.show.title }}</b-button>
-                  </b-card-title>
-                  <div v-if="s.episode!=undefined">
-                    <b-row class="pb-4 d-flex align-items-center text-center">
-                      <b-col cols="3">{{ s.episode.code_fmt }}</b-col>
-                      <b-col cols="4" class="text-center">{{ s.episode.title }}</b-col>
-                      <b-col cols="3">{{ s.episode.date.toLocaleDateString("fr-FR") }}</b-col>
-                      <b-col cols="2">
-                        <b-button @click="copy(s.show, s.episode)" :variant="'outline-'+theme.btn_outline" :title="copy_message" v-b-tooltip.hover>
-                          <b-icon-clipboard/>
-                        </b-button>
-                      </b-col>
-                    </b-row>
-                    <b-row no-gutter>
-                      <b-col cols="12" sm="6" class="d-flex justify-content-around my-2">
-                        <b-button :variant="variant(s.episode)" :href="links.twoddl+'?q='+encodeURIComponent(s.show.title)" target="_blank">2DDL</b-button>
-                        <b-button :variant="variant(s.episode)" :href="links.rarbg+'?search='+encodeURIComponent(s.show.title)+'+'+s.episode.code+resolution" target="_blank">RARBG</b-button>
-                        <div>
-                          <b-button :variant="variant(s.episode)" :href="links.animetosho+'?q='+encodeURIComponent(s.show.title)+resolution" target="_blank" v-if="Object.keys(s.show.genres).includes('Animation')">ANIME</b-button>
-                          <b-button :variant="variant(s.episode)" :href="links.tgx+'?search='+encodeURIComponent(s.show.title)+'+'+s.episode.code+resolution" target="_blank" v-else>TGX</b-button>
-                        </div>
-                      </b-col>
-                      <b-col cols="12" sm="6" class="d-flex justify-content-around my-2">
-                        <b-form-checkbox v-model="s.episode.user.downloaded" @input="downloaded(s.episode)" button :button-variant="s.episode.user.downloaded ? 'success' : 'outline-secondary'">Downloaded</b-form-checkbox>
-                        <b-form-checkbox v-model="s.episode.user.seen" @input="watched(s.episode)" button :button-variant="s.episode.user.seen ? 'success' : 'outline-secondary'">Watched</b-form-checkbox>
-                        <b-button @click="refresh_episode(s.show.id)" :disabled="!s.episode.user.seen" :variant="s.episode.user.seen ? 'info' : 'secondary'">
-                          <b-icon-chevron-double-right/>
-                        </b-button>
-                      </b-col>
-                    </b-row>
+              </div>
+              <div class="col-8 col-sm-10 d-flex">
+                <div class="card-body d-flex flex-column justify-content-between">
+                  <div class="card-title">
+                    <a @click="route('serie', s.show.id)" :class="'btn btn-lg btn-'+theme.bg">{{ s.show.title }}</a>
                   </div>
-                </b-card-body>
-              </b-col>
-            </b-row>
-          </b-card>
-        </b-col>
-      </b-row>
+                  <div v-if="s.episode!=undefined">
+                    <div class="row pb-4 d-flex align-items-center text-center">
+                      <div class="col-3">{{ s.episode.code_fmt }}</div>
+                      <div class="col-4 text-center">{{ s.episode.title }}</div>
+                      <div class="col-3">{{ s.episode.date.toLocaleDateString("fr-FR") }}</div>
+                      <div class="col-2">
+                        <copy-button :show="s.show" :episode="s.episode" :tx="theme.tx"></copy-button>
+                      </div>
+                    </div>
+                    <div class="row g-0">
+                      <div class="col-12 col-sm-6 d-flex justify-content-around my-2">
+                        <button :class="'btn btn-'+variant(s.episode)" :href="links.twoddl+'?q='+encodeURIComponent(s.show.title)" target="_blank">2DDL</button>
+                        <button :class="'btn btn-'+variant(s.episode)" :href="links.rarbg+'?search='+encodeURIComponent(s.show.title)+'+'+s.episode.code+resolution" target="_blank">RARBG</button>
+                        <div>
+                          <button :class="'btn btn-'+variant(s.episode)" :href="links.animetosho+'?q='+encodeURIComponent(s.show.title)+resolution" target="_blank" v-if="Object.keys(s.show.genres).includes('Animation')">ANIME</button>
+                          <button :class="'btn btn-'+variant(s.episode)" :href="links.tgx+'?search='+encodeURIComponent(s.show.title)+'+'+s.episode.code+resolution" target="_blank" v-else>TGX</button>
+                        </div>
+                      </div>
+                      <div class="col-12 col-sm-6 d-flex justify-content-around my-2">
+                        <button :class="'btn btn-'+(s.episode.user.downloaded ? 'success' : 'outline-secondary')" @click="downloaded(s.episode)">
+                          Downloaded
+                        </button>
+                        <button :class="'btn btn-'+(s.episode.user.seen ? 'success' : 'outline-secondary')" @click="watched(s.episode)">
+                          Watched
+                        </button>
+                        <button @click="refresh_episode(s.show.id)" :disabled="!s.episode.user.seen" :class="s.episode.user.seen ? 'btn btn-info' : 'btn btn-secondary'">
+                          <i class="bi bi-chevron-double-right"></i>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <!-- SERIES -->
 
-      <b-row no-gutters v-if="path=='search' || path=='discover' || path =='my_series'">
-        <b-col cols="12" xl="6" v-for="s in series" class="d-flex" :key="s.id">
-          <b-card no-body class="flex-fill" :bg-variant="theme.card_bg" :text-variant="theme.card_text">
-            <b-row no-gutters>
-              <b-col cols="4" sm="2" class="d-flex">
-                <b-card-img-lazy :src="s.images.poster" alt="poster" class="rounded-0" v-if="s.images.poster!=undefined" style="object-fit: contain"></b-card-img-lazy>
-              </b-col>
-              <b-col cols="8" sm="10" class="d-flex">
-                <b-card-body class="d-flex flex-column justify-content-between">
-                  <b-card-title>
-                    <b-button @click="route('serie', s.id)" variant="link" size="lg">{{ s.title }}</b-button>
-                  </b-card-title>
-                  <b-row class="text-center d-flex align-items-center">
-                    <b-col cols="3">Creation: {{ s.creation }}</b-col>
-                    <b-col cols="7">Genres: {{ Object.keys(s.genres).join(', ') }}</b-col>
-                    <b-col cols="2">
+      <div class="row g-0" v-if="path=='search' || path=='discover' || path =='my_series'">
+        <div class="col-12 col-xl-6 d-flex" v-for="s in series" :key="s.id">
+          <div class="card flex-fill" :class="'text-bg-'+theme.bg">
+            <div class="row g-0">
+              <div class="col-4 col-sm-2 d-flex">
+                <img class="card-img-top" :src="s.images.poster" alt="poster" class="rounded-0" v-if="s.images.poster!=undefined" style="object-fit: contain" loading="lazy">
+              </div>
+              <div class="col-8 col-sm-10 d-flex">
+                <div class="card-body d-flex flex-column justify-content-between">
+                  <div class="card-title">
+                    <button @click="route('serie', s.id)" :class="'btn btn-lg btn-'+theme.bg">{{ s.title }}</button>
+                  </div>
+                  <div class="text-center d-flex align-items-center">
+                    <div class="col-3">Creation: {{ s.creation }}</div>
+                    <div class="col-7">Genres: {{ Object.keys(s.genres).join(', ') }}</div>
+                    <div class="col-2">
                       <a :href="'https://www.imdb.com/title/'+s.imdb_id" target="_blank" v-if="s.imdb_id!=undefined">
                         <img src="imdb.svg" width="50px" alt="imdb">
                       </a>
-                    </b-col>
-                  </b-row>
+                    </div>
+                  </div>
                   <div class="my-2 overflow-auto" style="max-height: 75px">{{ s.description }}</div>
                   <div class="d-flex justify-content-center">
                     <div>
-                      <b-button variant="danger" @click="remove_show(s.id)" v-if="s.in_account">Remove</b-button>
-                      <b-button variant="primary" @click="add_show(s.id)" v-else>Add</b-button>
+                      <button class="btn btn-danger" @click="remove_show(s.id)" v-if="s.in_account">Remove</button>
+                      <button class="btn btn-primary" @click="add_show(s.id)" v-else>Add</button>
                     </div>
                     <div v-if="s.in_account">
-                      <b-button variant="warning" @click="archive_show(s.id)" v-if="!s.user.archived">Archive</b-button>
-                      <b-button variant="info" @click="unarchive_show(s.id)" v-else>Archive</b-button>
+                      <button class="btn btn-warning" @click="archive_show(s.id)" v-if="!s.user.archived">Archive</button>
+                      <button class="btn btn-info" @click="unarchive_show(s.id)" v-else>Archive</button>
                     </div>
                   </div>
-                </b-card-body>
-              </b-col>
-            </b-row>
-          </b-card>
-        </b-col>
-      </b-row>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <!-- SERIE -->
 
       <div v-if="path=='serie' && serie!=undefined">
         <div class="d-flex">
-          <b-card no-body class="flex-fill" :bg-variant="theme.card_bg" :text-variant="theme.card_text">
-            <b-row no-gutters>
-              <b-col cols="2" class="d-flex">
-                <b-card-img :src="serie.show.images.poster" alt="poster" class="rounded-0" style="object-fit: contain"></b-card-img>
-              </b-col>
-              <b-col cols="10" class="d-flex">
-                <b-card-body class="d-flex flex-column justify-content-between">
-                  <b-card-title>
-                    <b-dropdown size="lg" variant="dark" split>
-                      <template #button-content>
-                        <h4>{{ serie.show.title }}</h4>
-                      </template>
-                      <b-dropdown-item v-for="(a, j) in serie.show.aliases" @click="change_title(a)" :key="j">{{ a }}</b-dropdown-item>
-                    </b-dropdown>
-                  </b-card-title>
-                  <b-row class="text-center d-flex align-items-center">
-                    <b-col cols="3">Creation: {{ serie.show.creation }}</b-col>
-                    <b-col cols="7">Genres: {{ Object.keys(serie.show.genres).join(', ') }}</b-col>
-                    <b-col cols="2">
+          <div class="card flex-fill" :class="'text-bg-'+theme.bg">
+            <div class="row g-0">
+              <div class="col-2 d-flex">
+                <img class="card-img-top" :src="serie.show.images.poster" alt="poster" class="rounded-0" style="object-fit: contain">
+              </div>
+              <div class="col-10 d-flex">
+                <div class="card-body d-flex flex-column justify-content-between">
+                  <div class="card-title">
+                    <div class="btn-group">
+                      <button type="button" :class="'btn btn-lg btn-'+theme.bg">{{ serie.show.title }}</button>
+                      <button type="button" :class="'dropdown-toggle dropdown-toggle-split btn btn-lg btn-'+theme.bg" data-bs-toggle="dropdown"></button>
+                      <ul class="dropdown-menu dropdown-menu-end" :class="'dropdown-menu-'+theme.bg">
+                        <li v-for="(a, j) in serie.show.aliases" :key="j">
+                          <a class="dropdown-item" @click="change_title(a)" role="button">{{ a }}</a>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                  <div class="row text-center d-flex align-items-center">
+                    <div class="col-3">Creation: {{ serie.show.creation }}</div>
+                    <div class="col-7">Genres: {{ Object.keys(serie.show.genres).join(', ') }}</div>
+                    <div class="col-2">
                       <a :href="'https://www.imdb.com/title/'+serie.show.imdb_id" target="_blank" v-if="serie.show.imdb_id!=undefined">
                         <img src="imdb.svg" width="100px" alt="imdb">
                       </a>
-                    </b-col>
-                  </b-row>
+                    </div>
+                  </div>
                   <div class="my-2 overflow-auto text-center" style="max-height: 75px">{{ serie.show.description }}</div>
                   <div class="text-center">
-                    <b-button variant="info" @click="update_show(serie.show, true)">Refresh</b-button>
+                    <button class="btn btn-info" @click="update_show(serie.show, true)">Refresh</button>
                     <span v-if="serie.show.in_account">
-                      <b-button variant="danger" @click="remove_show(serie.show.id)">Remove</b-button>
-                      <b-button variant="warning" @click="archive_show(serie.show.id)">Archive</b-button>
+                      <button class="btn btn-danger" @click="remove_show(serie.show.id)">Remove</button>
+                      <button class="btn btn-warning" @click="archive_show(serie.show.id)">Archive</button>
                     </span>
-                    <b-button variant="primary" @click="add_show(serie.show.id)" v-else>Add</b-button>
+                    <button class="btn btn-primary" @click="add_show(serie.show.id)" v-else>Add</button>
                   </div>
-                </b-card-body>
-              </b-col>
-            </b-row>
-          </b-card>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
         <div class="text-center my-3">
-          <b-button-group>
-            <b-button v-for="(x, i) in Array(Number(serie.show.seasons))" @click="update_episodes(i+1)" :variant="i+1==serie.season ? 'primary' : 'outline-primary'" :key="i">
+          <div class="btn-group">
+            <button v-for="(x, i) in Array(Number(serie.show.seasons))" @click="update_episodes(i+1)" :class="i+1==serie.season ? 'btn btn-primary' : 'btn btn-outline-primary'" :key="i">
               Season {{i+1}}
-            </b-button>
-          </b-button-group>
+            </button>
+          </div>
         </div>
-        <div class="mt-3" :class="theme.text">
-          <b-row no-gutters v-for="e in serie.episodes" :key="e.id" class="text-center">
-            <b-col cols="2">{{ e.date.toLocaleDateString("fr-FR") }}</b-col>
-            <b-col cols="2">{{ e.code_fmt }}</b-col>
-            <b-col cols="5">{{ e.title }}</b-col>
-            <b-col cols="1">
-              <b-button @click="copy(serie.show, e)" :variant="'outline-'+theme.btn_outline" :title="copy_message" v-b-tooltip.hover.left>
-                <b-icon-clipboard/>
-              </b-button>
-            </b-col>
-            <b-col cols="1">
-              <b-form-checkbox v-model="e.user.downloaded" @input="downloaded(e)" button :button-variant="e.user.downloaded ? 'success' : 'outline-secondary'">
-                <b-icon-download></b-icon-download>
-              </b-form-checkbox>
-            </b-col>
-            <b-col cols="1">
-              <b-form-checkbox v-model="e.user.seen" @input="watched(e)" button :button-variant="e.user.seen ? 'success' : 'outline-secondary'">
-                <b-icon-eye-fill></b-icon-eye-fill>
-              </b-form-checkbox>
-            </b-col>
-          </b-row>
+        <div class="mt-3" :class="'text-'+theme.tx">
+          <div class="row g-0 text-center" v-for="e in serie.episodes" :key="e.id">
+            <div class="col-2">{{ e.date.toLocaleDateString("fr-FR") }}</div>
+            <div class="col-2">{{ e.code_fmt }}</div>
+            <div class="col-5">{{ e.title }}</div>
+            <div class="col-1">
+              <copy-button :show="serie.show" :episode="e" :tx="theme.tx" placement="left"></copy-button>
+            </div>
+            <div class="col-1">
+              <button :class="'btn btn-'+(e.user.downloaded ? 'success' : 'outline-secondary')" @click="downloaded(e)">
+                <i class="bi bi-download"></i>
+              </button>
+            </div>
+            <div class="col-1">
+              <button :class="'btn btn-'+(e.user.seen ? 'success' : 'outline-secondary')" @click="watched(e)">
+                <i class="bi bi-eye-fill"></i>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
       <!-- SETTINGS -->
 
-      <b-container v-if="path=='settings'">
+      <div class="container" v-if="path=='settings'">
 
-        <b-card :bg-variant="theme.card_bg" :text-variant="theme.card_text" title="Links" class="text-center">
-          <b-input-group prepend="rarbg" class="m-2">
-            <b-form-input v-model="links.rarbg">
-            </b-form-input>
-          </b-input-group>
-          <b-input-group prepend="2ddl" class="m-2">
-            <b-form-input v-model="links.twoddl">
-            </b-form-input>
-          </b-input-group>
-          <b-input-group prepend="tgx" class="m-2">
-            <b-form-input v-model="links.tgx">
-            </b-form-input>
-          </b-input-group>
-          <b-input-group prepend="animetosho" class="m-2">
-            <b-form-input v-model="links.animetosho">
-            </b-form-input>
-          </b-input-group>
-          <b-button variant="primary" @click="update_links()">Update</b-button>
-        </b-card>
+        <div class="card text-center" :class="'text-bg-'+theme.bg">
+          <div class="card-body">
+            <h4 class="card-title">Links</h4>
+            <div class="input-group m-2">
+              <span class="input-group-text">rarbg</span>
+              <input class="form-control" v-model="links.rarbg">
+            </div>
+            <div class="input-group m-2">
+              <span class="input-group-text">2ddl</span>
+              <input class="form-control" v-model="links.twoddl">
+            </div>
+            <div class="input-group m-2">
+              <span class="input-group-text">tgx</span>
+              <input class="form-control" v-model="links.tgx">
+            </div>
+            <div class="input-group m-2">
+              <span class="input-group-text">animetosho</span>
+              <input class="form-control" v-model="links.animetosho">
+            </div>
+            <button class="btn btn-primary" @click="update_links()">Update</button>
+          </div>
+        </div>
 
-        <b-card :bg-variant="theme.card_bg" :text-variant="theme.card_text" title="Resolution" class="text-center">
-          <b-form-select :options="[{value:'', text:''}, {value:'+720p', text:'720p'}, {value:'+1080p', text:'1080p'}, {value:'+2160p', text:'2160p'}]" v-model="resolution" @change="update_resolution()"></b-form-select>
-        </b-card>
-      </b-container>
+        <div class="card text-center" :class="'text-bg-'+theme.bg">
+          <div class="card-body">
+            <h4 class="card-title">Resolution</h4>
+            <select class="form-select" v-model="resolution" @change="update_resolution()">
+              <option value=""></option>
+              <option value="+720p">720p</option>
+              <option value="+1080p">1080p</option>
+              <option value="+2160p">2160p</option>
+            </select>
+          </div>
+        </div>
+      </div>
 
     </div>
   </body>

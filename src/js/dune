@@ -21,6 +21,6 @@
 (executable
  (name ui)
  (modules theme ui)
- (preprocess (pps ppx_deriving_jsoo))
- (libraries vue-jsoo idb api ez_api.ifetch_lwt)
+ (preprocess (pps ppx_deriving_jsoo vue-ppx))
+ (libraries idb api ez_api.ifetch_lwt)
  (modes js))

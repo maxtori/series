@@ -71,7 +71,7 @@ type show = {
     case (list (tup2 string string)) (function [] -> Some [] | _ -> None) (fun l -> l);
     case (assoc string) (fun l -> Some l) (fun l -> l)]]
   s_images: (string * string option) list; [@assoc] [@dft []]
-  s_outdated: bool; [@exclude false]
+  s_outdated: bool; [@exclude false] [@mutable]
   s_description: string; [@dft ""]
   s_creation: string; [@dft ""]
   s_in_account: bool; [@dft false]
