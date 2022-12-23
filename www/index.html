@@ -107,11 +107,11 @@
                     </div>
                     <div class="row g-0">
                       <div class="col-12 col-sm-6 d-flex justify-content-around my-2">
-                        <button :class="'btn btn-'+variant(s.episode)" :href="links.twoddl+'?q='+encodeURIComponent(s.show.title)" target="_blank">2DDL</button>
-                        <button :class="'btn btn-'+variant(s.episode)" :href="links.rarbg+'?search='+encodeURIComponent(s.show.title)+'+'+s.episode.code+resolution" target="_blank">RARBG</button>
+                        <a :class="'btn btn-'+variant(s.episode)" :href="links.twoddl+'?q='+encodeURIComponent(s.show.title)" target="_blank">2DDL</a>
+                        <a :class="'btn btn-'+variant(s.episode)" :href="links.rarbg+'?search='+encodeURIComponent(s.show.title)+'+'+s.episode.code+resolution" target="_blank">RARBG</a>
                         <div>
-                          <button :class="'btn btn-'+variant(s.episode)" :href="links.animetosho+'?q='+encodeURIComponent(s.show.title)+resolution" target="_blank" v-if="Object.keys(s.show.genres).includes('Animation')">ANIME</button>
-                          <button :class="'btn btn-'+variant(s.episode)" :href="links.tgx+'?search='+encodeURIComponent(s.show.title)+'+'+s.episode.code+resolution" target="_blank" v-else>TGX</button>
+                          <a :class="'btn btn-'+variant(s.episode)" :href="links.animetosho+'?q='+encodeURIComponent(s.show.title)+resolution" target="_blank" v-if="Object.keys(s.show.genres).includes('Animation')">ANIME</a>
+                          <a :class="'btn btn-'+variant(s.episode)" :href="links.tgx+'?search='+encodeURIComponent(s.show.title)+'+'+s.episode.code+resolution" target="_blank" v-else>TGX</a>
                         </div>
                       </div>
                       <div class="col-12 col-sm-6 d-flex justify-content-around my-2">
