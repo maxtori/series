@@ -176,9 +176,9 @@ let format_show_title s =
   else format_filename s
 
 let get_unseen ?(limit=1) ?(released=0) ?(period=Cal.Period.day 8) ?store ?id ?(fill=true) token =
-  let@ shows = get_episodes ~limit ~released ?id token in
+  let>? shows = get_episodes ~limit ~released ?id token in
   let now = Cal.today () in
-  let@! l = fold (fun acc s ->
+  let|>? l = fold (fun acc s ->
       let id = s.su_show.s_id in
       let es_show = s.su_show in
       match s.su_unseen with
@@ -190,22 +190,22 @@ let get_unseen ?(limit=1) ?(released=0) ?(period=Cal.Period.day 8) ?store ?id ?(
             if Cal.(Period.compare (sub date now) period) < 0 then
               let es_episode = Some {e with e_status = episode_status now date} in
               let ffill s = {es_show with s_images = s.s_images; s_genres = s.s_genres} in
-              let@! es_show =
+              let|>? es_show =
                 if not fill then Lwt.return_ok es_show
                 else match store with
                   | None ->
-                    let@! s = get_show ~token id in
+                    let|>? s = get_show ~token id in
                     ffill s
                   | Some (get, add, put, _delete) ->
                     let> s = get id in
                     match s with
                     | Error _ ->
-                      let@! s = get_show ~token id in
+                      let|>? s = get_show ~token id in
                       let s = ffill s in
                       put id s;
                       s
                     | Ok None ->
-                      let@! s = get_show ~token id in
+                      let|>? s = get_show ~token id in
                       let s = ffill s in
                       add id s;
                       s

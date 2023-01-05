@@ -24,7 +24,7 @@ let get_token () =
     let login = Scanf.scanf "%s" (fun s -> s) in
     Format.printf "Password:@.";
     let password = Scanf.scanf "%s" (fun s -> s) in
-    let@! auth = Api.request_token ~login ~password in
+    let|>? auth = Api.request_token ~login ~password in
     store_token auth.a_token;
     auth.a_token in
   match read_token () with
@@ -74,8 +74,8 @@ let handle_episode_files s e =
 
 let main () =
   Api.print_error @@
-  let@ token = get_token () in
-  let@! shows = Api.get_unseen ~fill:false token in
+  let>? token = get_token () in
+  let|>? shows = Api.get_unseen ~fill:false token in
   List.iter (fun s ->
       match s.es_episode with
       | None -> ()

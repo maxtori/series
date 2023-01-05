@@ -1,8 +1,7 @@
 let (let>) = Lwt.bind
-let (let>!) p f = Lwt.map f p
-let (let>+) p f = Lwt.bind p (fun x -> Lwt.return_ok (f x))
-let (let@) p f = Lwt.bind p (function Error e -> Lwt.return_error e | Ok x -> f x)
-let (let@!) p f = Lwt.map (Result.map f) p
+let (let|>) p f = Lwt.map f p
+let (let>?) p f = Lwt.bind p (function Error e -> Lwt.return_error e | Ok x -> f x)
+let (let|>?) p f = Lwt.map (Result.map f) p
 
 let rec iter f = function
   | [] -> Lwt.return_ok ()

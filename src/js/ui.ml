@@ -113,21 +113,21 @@ let locked = ref false
 
 let serie (app: all t) (id: int) =
   Api.run @@
-  let@ show = Idb.get_show app##.db id in
-  let@ se_show = match show with
+  let>? show = Idb.get_show app##.db id in
+  let>? se_show = match show with
     | None ->
-      let@! show = Api.get_show ~token:(to_string app##.token) id in
+      let|>? show = Api.get_show ~token:(to_string app##.token) id in
       if show.s_in_account then Idb.put_show app##.db show.s_id show;
       show
     | Some s -> Lwt.return_ok s in
   let season = int_of_string_opt se_show.s_seasons in
-  let@ se_show, season = match season with
+  let>? se_show, season = match season with
     | None ->
-      let@! show = Api.get_show ~token:(to_string app##.token) id in
+      let|>? show = Api.get_show ~token:(to_string app##.token) id in
       if show.s_in_account then Idb.put_show app##.db show.s_id show;
       show, int_of_string_opt show.s_seasons
     | Some season -> Lwt.return_ok (se_show, Some season) in
-  let@! se_episodes = Api.get_show_episodes ~token:(to_string app##.token) ?season id in
+  let|>? se_episodes = Api.get_show_episodes ~token:(to_string app##.token) ?season id in
   app##.serie := def (serie_to_jsoo {se_show; se_episodes; se_season=season})
 
 let set_body_class = function
@@ -169,7 +169,7 @@ and downloaded app (e: episode_jsoo t) =
   if not !locked then
     let b = not (to_bool e##.user##.downloaded) in
     Api.print_error @@
-    let@! _ = Api.downloaded ~token:(to_string app##.token) e##.id b in
+    let|>? _ = Api.downloaded ~token:(to_string app##.token) e##.id b in
     e##.user##.downloaded := bool b
   else Lwt.return_unit
 [@@noconv]
@@ -179,7 +179,7 @@ and watched app (e: episode_jsoo t) =
   if not !locked then
     Api.print_error @@
     let b = not (to_bool e##.user##.seen) in
-    let@! _ = Api.watched ~token:(to_string app##.token) e##.id b in
+    let|>? _ = Api.watched ~token:(to_string app##.token) e##.id b in
     e##.user##.seen := bool b
   else Lwt.return_unit
 [@@noconv]
@@ -191,7 +191,7 @@ and variant _app (e: episode) : string =
 
 let%meth rec update_show app (s: show) (reset: bool) =
   Api.run @@
-  let@! s2 = Api.get_show ~token:(to_string app##.token) s.s_id in
+  let|>? s2 = Api.get_show ~token:(to_string app##.token) s.s_id in
   let es_show = {s2 with s_title = s.s_title; s_outdated = false} in
   Idb.put_show app##.db s.s_id es_show;
   List.iteri
@@ -211,7 +211,7 @@ let%meth set_outdated _app (s: show_jsoo t) =
 and refresh_episode app (id: int) =
   locked := true;
   Api.run @@
-  let@ new_shows = Api.get_unseen ~store:(Idb.manage_show app##.db) ~id (to_string app##.token) in
+  let>? new_shows = Api.get_unseen ~store:(Idb.manage_show app##.db) ~id (to_string app##.token) in
   match new_shows with
   | [] ->
     let shows = of_listf episode_show_to_jsoo @@
@@ -227,7 +227,7 @@ and refresh_episode app (id: int) =
 
 and add_show app (id: int) =
   Api.run @@
-  let@! r = Api.add_show ~token:(to_string app##.token) id in
+  let|>? r = Api.add_show ~token:(to_string app##.token) id in
   Idb.add_show app##.db r.s_id r;
   List.iteri
     (fun i s -> if s.s_id = id then
@@ -237,7 +237,7 @@ and add_show app (id: int) =
 and remove_show app (id: int) =
   Idb.remove_show app##.db id;
   Api.run @@
-  let@! r = Api.remove_show ~token:(to_string app##.token) id in
+  let|>? r = Api.remove_show ~token:(to_string app##.token) id in
   List.iteri
     (fun i s -> if s.s_id = id then
         ignore @@ app##.series##splice_1 i 1 (show_to_jsoo r))
@@ -245,7 +245,7 @@ and remove_show app (id: int) =
 
 and archive_show app (id: int) =
   Api.run @@
-  let@! r = Api.archive_show ~token:(to_string app##.token) id in
+  let|>? r = Api.archive_show ~token:(to_string app##.token) id in
   List.iteri
     (fun i s -> if s.s_id = id then
         ignore @@ app##.series##splice_1 i 1 (show_to_jsoo r))
@@ -253,7 +253,7 @@ and archive_show app (id: int) =
 
 and unarchive_show app (id: int) =
   Api.run @@
-  let@! r = Api.unarchive_show ~token:(to_string app##.token) id in
+  let|>? r = Api.unarchive_show ~token:(to_string app##.token) id in
   List.iteri
     (fun i s -> if s.s_id = id then
         ignore @@ app##.series##splice_1 i 1 (show_to_jsoo r))
@@ -271,7 +271,7 @@ and update_episodes app (season: int) =
   | None -> ()
   | Some serie ->
     Api.run @@
-    let@! se_episodes = Api.get_show_episodes ~token:(to_string app##.token) ~season serie.se_show.s_id in
+    let|>? se_episodes = Api.get_show_episodes ~token:(to_string app##.token) ~season serie.se_show.s_id in
     match Optdef.to_option app##.serie with
     | None -> ()
     | Some serie ->
@@ -289,24 +289,24 @@ and change_title app (s: js_string t) : unit =
 let search (app: all t) =
   app##.series := of_list [];
   Api.run @@
-  let@! searches = Api.search_shows ~token:(to_string app##.token) (to_string app##.query) in
+  let|>? searches = Api.search_shows ~token:(to_string app##.token) (to_string app##.query) in
   app##.series := of_listf show_to_jsoo searches
 
 let discover (app: all t) =
   app##.series := of_list [];
   Api.run @@
-  let@! series = Api.discover ~token:(to_string app##.token) () in
+  let|>? series = Api.discover ~token:(to_string app##.token) () in
   app##.series := of_listf show_to_jsoo series
 
 let my_series (app: all t) =
   app##.series := of_list [];
   Api.run @@
-  let@! series = Api.my_shows (to_string app##.token) in
+  let|>? series = Api.my_shows (to_string app##.token) in
   app##.series := of_listf show_to_jsoo series
 
 let home (app: all t) =
   Api.run @@
-  let@! shows = Api.get_unseen ~store:(Idb.manage_show app##.db) (to_string app##.token) in
+  let|>? shows = Api.get_unseen ~store:(Idb.manage_show app##.db) (to_string app##.token) in
   app##.shows := of_listf episode_show_to_jsoo shows
 
 let%meth route app path id =
@@ -332,7 +332,7 @@ let%meth sign_out app =
 and sign_in app =
   let login = login_of_jsoo app##.login in
   Api.run @@
-  let@! auth = Api.request_token ~login:login.username ~password:login.password in
+  let|>? auth = Api.request_token ~login:login.username ~password:login.password in
   app##.token := (string auth.a_token);
   Idb.update_config ~key:"token" app##.db auth.a_token;
   route app (string "home") undefined
@@ -356,7 +356,8 @@ and update_resolution app : unit =
     match to_string app##.token with
     | "" -> Lwt.return_ok @@ route app (string "login") undefined
     | token ->
-      let>+ active = Api.active_token token in
+      let> active = Api.active_token token in
+      Lwt.return_ok @@
       if active then (
         app##.token := string token;
         f ())
@@ -367,21 +368,21 @@ and update_resolution app : unit =
 let () =
   Idb.open_db @@ fun db ->
   Api.run (
-    let@ theme = Idb.get_config ~key:"theme" db in
+    let>? theme = Idb.get_config ~key:"theme" db in
     let theme = match theme with
       | Some "dark" -> set_body_class @@ Some "bg-dark"; dark_theme
       | _ -> light_theme in
-    let@ token = Idb.get_config ~key:"token" db in
-    let@ rarbg = Idb.get_config ~key:"rarbg" db in
+    let>? token = Idb.get_config ~key:"token" db in
+    let>? rarbg = Idb.get_config ~key:"rarbg" db in
     let rarbg = Option.value ~default:"https://rarbgproxy.org/torrent.php" rarbg in
-    let@ twoddl = Idb.get_config ~key:"2ddl" db in
+    let>? twoddl = Idb.get_config ~key:"2ddl" db in
     let twoddl = Option.value ~default:"https://2ddl.it" twoddl in
-    let@ tgx = Idb.get_config ~key:"tgx" db in
+    let>? tgx = Idb.get_config ~key:"tgx" db in
     let tgx = Option.value ~default:"https://torrentgalaxy.mx/torrents.php" tgx in
-    let@ animetosho = Idb.get_config ~key:"animetosho" db in
+    let>? animetosho = Idb.get_config ~key:"animetosho" db in
     let animetosho = Option.value ~default:"https://animetosho.org/search" animetosho in
     let links = {rarbg; twoddl; tgx; animetosho} in
-    let@ resolution = Idb.get_config ~key:"resolution" db in
+    let>? resolution = Idb.get_config ~key:"resolution" db in
     let resolution = Option.value ~default:"" resolution in
 
     let%data shows : episode_show list = []
