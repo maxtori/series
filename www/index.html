@@ -115,12 +115,8 @@
                         </div>
                       </div>
                       <div class="col-12 col-sm-6 d-flex justify-content-around my-2">
-                        <button :class="'btn btn-'+(s.episode.user.downloaded ? 'success' : 'outline-secondary')" @click="downloaded(s.episode)">
-                          Downloaded
-                        </button>
-                        <button :class="'btn btn-'+(s.episode.user.seen ? 'success' : 'outline-secondary')" @click="watched(s.episode)">
-                          Watched
-                        </button>
+                        <load-button :variant="s.episode.user.downloaded ? 'success' : 'outline-secondary'" :action="() => downloaded(s.episode)">Downloaded</load-button>
+                        <load-button :variant="s.episode.user.seen ? 'success' : 'outline-secondary'" :action="() => watched(s.episode)">Watched</load-button>
                         <button @click="refresh_episode(s.show.id)" :disabled="!s.episode.user.seen" :class="s.episode.user.seen ? 'btn btn-info' : 'btn btn-secondary'">
                           <i class="bi bi-chevron-double-right"></i>
                         </button>
@@ -236,14 +232,14 @@
               <copy-button :show="serie.show" :episode="e" :tx="theme.tx" placement="left"></copy-button>
             </div>
             <div class="col-1">
-              <button :class="'btn btn-'+(e.user.downloaded ? 'success' : 'outline-secondary')" @click="downloaded(e)">
+              <load-button :variant="e.user.downloaded ? 'success' : 'outline-secondary'" :action="() => downloaded(e)">
                 <i class="bi bi-download"></i>
-              </button>
+              </load-button>
             </div>
             <div class="col-1">
-              <button :class="'btn btn-'+(e.user.seen ? 'success' : 'outline-secondary')" @click="watched(e)">
+              <load-button :variant="e.user.seen ? 'success' : 'outline-secondary'" :action="() => watched(e)">
                 <i class="bi bi-eye-fill"></i>
-              </button>
+              </load-button>
             </div>
           </div>
         </div>

@@ -1,5 +1,5 @@
 open Rp
-open Ezjs_min
+open Ezjs_min_lwt
 open Types
 open Jsoo
 open Theme
@@ -52,6 +52,61 @@ module CopyButton = struct
     <i class="bi bi-clipboard"></i>
   </button>
   |}
+end
+
+module LoadButton = struct
+
+  let button_class_f variant = "btn btn-" ^ variant
+  let text_class_f = function
+    | "primary" | "secondary" | "success" | "danger" | "dark" -> "text-light"
+    | "outline-primary" -> "text-primary"
+    | "outline-secondary" -> "text-secondary"
+    | "outline-success" -> "text-success"
+    | "outline-danger" -> "text-danger"
+    | "outline-warning" -> "text-warning"
+    | "outline-info" -> "text-info"
+    | _ -> ""
+
+  let%prop variant = "secondary"
+  and grow = false
+  and [@noconv] action : unit -> unit Promise.promise t = {req}
+
+  let%data loading = false
+  and button_style = ""
+  and spinner_kind app : string = if to_bool app##.grow then "spinner-grow" else "spinner-border"
+  and button_class app : string = button_class_f (to_string app##.variant)
+  and text_class app : string = text_class_f (to_string app##.variant)
+
+  let%watch variant app n _old =
+    app##.button_class_ := string (button_class_f n);
+    app##.text_class_ := string (text_class_f n)
+
+  let%meth process app =
+    app##.loading := _true;
+    (app##.action ())##then_ (wrap_callback (fun () -> app##.loading := _false))
+
+  [%%mounted fun app ->
+    match Optdef.to_option [%el app] with
+    | None -> ()
+    | Some elt ->
+      let width = elt##.offsetWidth + 1 in
+      let height = elt##.offsetHeight + 1 in
+      app##.button_style_ := string (Format.sprintf "width: %dpx; height: %dpx" width height)
+  ]
+
+  [%%comp {conv}]
+
+  {%%template|
+  <button @click="process()" :class="button_class" :style="button_style">
+    <span v-if="!loading">
+      <slot>
+      </slot>
+    </span>
+    <span v-else :class="spinner_kind+' '+spinner_kind+'-sm '+text_class" role="status">
+    </span>
+  </button>
+  |}
+
 end
 
 let locked = ref false
@@ -110,19 +165,23 @@ let%meth copy _app (show: show) (e: episode) (id : int) =
     ignore @@ tp##setContent (Unsafe.obj [| ".tooltip-inner", Unsafe.inject (string "copied!") |])
 
 and downloaded app (e: episode_jsoo t) =
+  Promise.promise_lwt @@
   if not !locked then
-    Api.run @@
     let b = not (to_bool e##.user##.downloaded) in
+    Api.print_error @@
     let@! _ = Api.downloaded ~token:(to_string app##.token) e##.id b in
     e##.user##.downloaded := bool b
+  else Lwt.return_unit
 [@@noconv]
 
 and watched app (e: episode_jsoo t) =
+  Promise.promise_lwt @@
   if not !locked then
-    Api.run @@
+    Api.print_error @@
     let b = not (to_bool e##.user##.seen) in
     let@! _ = Api.watched ~token:(to_string app##.token) e##.id b in
     e##.user##.seen := bool b
+  else Lwt.return_unit
 [@@noconv]
 
 and variant _app (e: episode) : string =
@@ -337,5 +396,5 @@ let () =
     and links : links = links
     and resolution = resolution
     and copy_message = "copy" in
-    let _app = [%app {conv; types; mount; unhide; export; components=[CopyButton]}] in
+    let _app = [%app {conv; types; mount; unhide; export; components=[CopyButton; LoadButton]}] in
     Lwt.return_ok ())

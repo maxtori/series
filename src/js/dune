@@ -15,7 +15,7 @@
  (name idb)
  (modules idb)
  (preprocess (pps ppx_deriving_jsoo))
- (libraries jsoo ezjs_idb lwt)
+ (libraries jsoo ezjs_idb ezjs_min.lwt)
  (modes byte))
 
 (executable
