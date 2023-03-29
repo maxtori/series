@@ -135,17 +135,20 @@ let set_body_class = function
   | Some c -> Dom_html.document##.body##setAttribute (string "class") (string c)
 
 let file_path = ref false
+let set_file_path () =
+  match Url.url_of_string (to_string Dom_html.window##.location##.href) with
+  | Some (Url.File _) -> file_path := true
+  | _ -> ()
 
 let get_path () =
   match Url.url_of_string (to_string Dom_html.window##.location##.href) with
   | None -> "", []
   | Some url -> match url with
     | Url.Http hu | Url.Https hu -> String.concat "/" hu.Url.hu_path, hu.Url.hu_arguments
-    | Url.File fu ->
-      file_path := true;
-      String.concat "/" fu.Url.fu_path, []
+    | Url.File fu -> String.concat "/" fu.Url.fu_path, []
 
 let set_path ?(scroll=true) ?(args=[]) s =
+  log "TEST0 %B %s" !file_path s;
   if not !file_path then
     let args = match args with
       | [] -> ""
@@ -353,6 +356,7 @@ and update_resolution app : unit =
       let id = optdef int_of_string @@ List.assoc_opt "id" args in
       route app (string path) id in
     Dom_html.window##.onpopstate := Dom_html.handler (fun _e -> f (); _true);
+    set_file_path ();
     match to_string app##.token with
     | "" -> Lwt.return_ok @@ route app (string "login") undefined
     | token ->

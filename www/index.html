@@ -66,13 +66,13 @@
       <div class="mb-3">
 
         <div class="container" v-if="path=='login'">
-          <div>
-            <label :class="'text-'+theme.tx">Username</label>
-            <input class="form-control" :class="'text-'+theme.tx" v-model.trim="login.username">
+          <div class="mb-3">
+            <label :class="'form-label text-'+theme.tx">Username</label>
+            <input class="form-control" v-model.trim="login.username">
           </div>
-          <div>
-            <label :class="'text-'+theme.tx">Password</label>
-            <input class="form-control" :class="'text-'+theme.tx" v-model.trim="login.password" type="password" @keyup.enter="sign_in()">
+          <div class="mb-3">
+            <label :class="'form-label text-'+theme.tx">Password</label>
+            <input class="form-control" v-model.trim="login.password" type="password" @keyup.enter="sign_in()">
           </div>
           <div class="text-center">
             <button class="btn btn-primary" @click="sign_in()">Sign In</button>
