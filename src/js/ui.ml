@@ -15,12 +15,12 @@ type login = {
   password : string; [@mutable]
 } [@@deriving jsoo]
 
-type links = {
-  rarbg: string;
-  twoddl: string;
-  tgx: string;
-  animetosho: string
-} [@@deriving jsoo]
+(* type links = { *)
+(*   rarbg: string; *)
+(*   twoddl: string; *)
+(*   tgx: string; *)
+(*   animetosho: string *)
+(* } [@@deriving jsoo] *)
 
 module CopyButton = struct
 
@@ -112,6 +112,7 @@ end
 let locked = ref false
 
 let serie (app: all t) (id: int) =
+  app##.serie := undefined;
   Api.run @@
   let>? show = Idb.get_show app##.db id in
   let>? se_show = match show with
@@ -140,15 +141,7 @@ let set_file_path () =
   | Some (Url.File _) -> file_path := true
   | _ -> ()
 
-let get_path () =
-  match Url.url_of_string (to_string Dom_html.window##.location##.href) with
-  | None -> "", []
-  | Some url -> match url with
-    | Url.Http hu | Url.Https hu -> String.concat "/" hu.Url.hu_path, hu.Url.hu_arguments
-    | Url.File fu -> String.concat "/" fu.Url.fu_path, []
-
 let set_path ?(scroll=true) ?(args=[]) s =
-  log "TEST0 %B %s" !file_path s;
   if not !file_path then
     let args = match args with
       | [] -> ""
@@ -156,6 +149,14 @@ let set_path ?(scroll=true) ?(args=[]) s =
     let path = some @@ string @@ "/" ^ s ^ args in
     Dom_html.window##.history##pushState path (string "") path;
     if scroll then Dom_html.window##scroll 0 0
+
+let get_path () =
+  match Url.url_of_string (to_string Dom_html.window##.location##.href) with
+  | None -> "", []
+  | Some url -> match url with
+    | Url.Http hu | Url.Https hu -> String.concat "/" hu.Url.hu_path, hu.Url.hu_arguments
+    | Url.File fu -> String.concat "/" fu.Url.fu_path, []
+
 
 let%meth copy _app (show: show) (e: episode) (id : int) =
   let tp = Unsafe.global##.bootstrap##._Tooltip##getInstance (string ("#copy-" ^ string_of_int id)) in
@@ -340,34 +341,36 @@ and sign_in app =
   Idb.update_config ~key:"token" app##.db auth.a_token;
   route app (string "home") undefined
 
-and update_links app : unit =
-  let links = links_of_jsoo app##.links in
-  Idb.update_config ~key:"rarbg" app##.db links.rarbg;
-  Idb.update_config ~key:"2ddl" app##.db links.twoddl;
-  Idb.update_config ~key:"tgx" app##.db links.tgx;
-  Idb.update_config ~key:"animetosho" app##.db links.animetosho
+and add_proxy app =
+  Idb.add_proxy app##.db (Idb.proxy_of_jsoo app##.proxy);
+  ignore @@ app##.proxies##splice_1 app##.proxies##.length 0 app##.proxy;
+  app##.proxy := Idb.(proxy_to_jsoo dummy_proxy)
+
+and remove_proxy app name i =
+  Idb.remove_proxy app##.db (to_string name);
+  app##.proxies##splice i 1
 
 and update_resolution app : unit =
   Idb.update_config ~key:"resolution" app##.db (to_string app##.resolution)
 
 [%%mounted (fun app ->
-    let f () =
-      let path, args = get_path () in
-      let id = optdef int_of_string @@ List.assoc_opt "id" args in
-      route app (string path) id in
-    Dom_html.window##.onpopstate := Dom_html.handler (fun _e -> f (); _true);
-    set_file_path ();
-    match to_string app##.token with
-    | "" -> Lwt.return_ok @@ route app (string "login") undefined
-    | token ->
-      let> active = Api.active_token token in
-      Lwt.return_ok @@
-      if active then (
-        app##.token := string token;
-        f ())
-      else (
-        Idb.remove_config ~key:"token" app##.db;
-        route app (string "login") undefined))]
+  let f () =
+    let path, args = get_path () in
+    let id = optdef int_of_string @@ List.assoc_opt "id" args in
+    route app (string path) id in
+  Dom_html.window##.onpopstate := Dom_html.handler (fun _e -> f (); _true);
+  set_file_path ();
+  match to_string app##.token with
+  | "" -> Lwt.return_ok @@ route app (string "login") undefined
+  | token ->
+    let> active = Api.active_token token in
+    Lwt.return_ok @@
+    if active then (
+      app##.token := string token;
+      f ())
+    else (
+      Idb.remove_config ~key:"token" app##.db;
+      route app (string "login") undefined))]
 
 let () =
   Idb.open_db @@ fun db ->
@@ -377,17 +380,9 @@ let () =
       | Some "dark" -> set_body_class @@ Some "bg-dark"; dark_theme
       | _ -> light_theme in
     let>? token = Idb.get_config ~key:"token" db in
-    let>? rarbg = Idb.get_config ~key:"rarbg" db in
-    let rarbg = Option.value ~default:"https://rarbgproxy.org/torrent.php" rarbg in
-    let>? twoddl = Idb.get_config ~key:"2ddl" db in
-    let twoddl = Option.value ~default:"https://2ddl.it" twoddl in
-    let>? tgx = Idb.get_config ~key:"tgx" db in
-    let tgx = Option.value ~default:"https://torrentgalaxy.mx/torrents.php" tgx in
-    let>? animetosho = Idb.get_config ~key:"animetosho" db in
-    let animetosho = Option.value ~default:"https://animetosho.org/search" animetosho in
-    let links = {rarbg; twoddl; tgx; animetosho} in
     let>? resolution = Idb.get_config ~key:"resolution" db in
     let resolution = Option.value ~default:"" resolution in
+    let>? proxies = Idb.get_proxies db in
 
     let%data shows : episode_show list = []
     and db : Ezjs_idb.Types.iDBDatabase t = db [@@noconv]
@@ -398,8 +393,9 @@ let () =
     and theme : theme = theme
     and serie : serie option = None
     and login : login = {username=""; password=""}
-    and links : links = links
+    and proxies : Idb.proxy list = proxies
     and resolution = resolution
-    and copy_message = "copy" in
+    and copy_message = "copy"
+    and proxy : Idb.proxy = Idb.dummy_proxy in
     let _app = [%app {conv; types; mount; unhide; export; components=[CopyButton; LoadButton]}] in
     Lwt.return_ok ())

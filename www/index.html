@@ -109,12 +109,9 @@
                       </div>
                       <div class="row g-0">
                         <div class="col-12 col-sm-6 d-flex justify-content-around my-2">
-                          <a :class="'btn btn-'+variant(s.episode)" :href="links.twoddl+'?q='+encodeURIComponent(s.show.title)" target="_blank">2DDL</a>
-                          <a :class="'btn btn-'+variant(s.episode)" :href="links.rarbg+'?search='+encodeURIComponent(s.show.title)+'+'+s.episode.code+resolution" target="_blank">RARBG</a>
-                          <div>
-                            <a :class="'btn btn-'+variant(s.episode)" :href="links.animetosho+'?q='+encodeURIComponent(s.show.title)+resolution" target="_blank" v-if="Object.keys(s.show.genres).includes('Animation')">ANIME</a>
-                            <a :class="'btn btn-'+variant(s.episode)" :href="links.tgx+'?search='+encodeURIComponent(s.show.title)+'+'+s.episode.code+resolution" target="_blank" v-else>TGX</a>
-                          </div>
+                          <span v-for="p in proxies">
+                            <a v-if="p.for_anime && Object.keys(s.show.genres).includes('Animation') || !p.for_anime" :class="'btn btn-'+variant(s.episode)" :href="p.url+encodeURIComponent(s.show.title+' '+(p.with_code ? s.episode.code : '')+resolution)+p.post_url" target="_blank">{{ p.name }}</a>
+                          </span>
                         </div>
                         <div class="col-12 col-sm-6 d-flex justify-content-around my-2">
                           <load-button :variant="s.episode.user.downloaded ? 'success' : 'outline-secondary'" :action="() => downloaded(s.episode)">Downloaded</load-button>
@@ -253,24 +250,70 @@
 
           <div class="card text-center" :class="'text-bg-'+theme.bg">
             <div class="card-body">
-              <h4 class="card-title">Links</h4>
-              <div class="input-group m-2">
-                <span class="input-group-text">rarbg</span>
-                <input class="form-control" v-model="links.rarbg">
+              <h4 class="card-title">Proxies</h4>
+              <table class="table table-dark m-2" v-if="proxies.length!=0">
+                <thead>
+                  <tr>
+                    <th scope="col">Name</th>
+                    <th scope="col">URL</th>
+                    <th scope="col">Code</th>
+                    <th scope="col">Anime</th>
+                    <th scope="col"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(p, i) in proxies">
+                    <td>{{ p.name }}</td>
+                    <td>{{ p.url + '{query}' + p.post_url }}</td>
+                    <td>{{ p.with_code }}</td>
+                    <td>{{ p.for_anime }}</td>
+                    <td>
+                      <button class="btn btn-danger btn-sm" @click="remove_proxy(p.name, i)">
+                        <i class="bi bi-trash"></i>
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              <div :class="'card m-2 text-bg-'+theme.bg">
+                <div class="row">
+                  <div class="col-3">
+                    <div class="input-group mb-2">
+                      <span class="input-group-text">Name</span>
+                      <input type="text" class="form-control" v-model="proxy.name">
+                    </div>
+                  </div>
+                  <div class="col-7">
+                    <div class="input-group mb-2">
+                      <span class="input-group-text">URL</span>
+                      <input type="text" class="form-control" v-model="proxy.url">
+                    </div>
+                  </div>
+                  <div class="col-2">
+                    <div class="input-group mb-2">
+                      <span class="input-group-text">after</span>
+                      <input type="text" class="form-control" v-model="proxy.post_url">
+                    </div>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col-3 offset-2">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" v-model="proxy.with_code">
+                      <label class="form-check-label">Use with code</label>
+                    </div>
+                  </div>
+                  <div class="col-3 offset-2">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" v-model="proxy.for_anime">
+                      <label class="form-check-label">Use for Anime</label>
+                    </div>
+                  </div>
+                </div>
+                <button class="btn btn-primary m-2" @click="add_proxy(proxy)">
+                  ADD
+                </button>
               </div>
-              <div class="input-group m-2">
-                <span class="input-group-text">2ddl</span>
-                <input class="form-control" v-model="links.twoddl">
-              </div>
-              <div class="input-group m-2">
-                <span class="input-group-text">tgx</span>
-                <input class="form-control" v-model="links.tgx">
-              </div>
-              <div class="input-group m-2">
-                <span class="input-group-text">animetosho</span>
-                <input class="form-control" v-model="links.animetosho">
-              </div>
-              <button class="btn btn-primary" @click="update_links()">Update</button>
             </div>
           </div>
 
@@ -279,9 +322,9 @@
               <h4 class="card-title">Resolution</h4>
               <select class="form-select" v-model="resolution" @change="update_resolution()">
                 <option value=""></option>
-                <option value="+720p">720p</option>
-                <option value="+1080p">1080p</option>
-                <option value="+2160p">2160p</option>
+                <option value=" 720p">720p</option>
+                <option value=" 1080p">1080p</option>
+                <option value=" 2160p">2160p</option>
               </select>
             </div>
           </div>
