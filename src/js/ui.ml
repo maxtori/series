@@ -15,13 +15,6 @@ type login = {
   password : string; [@mutable]
 } [@@deriving jsoo]
 
-(* type links = { *)
-(*   rarbg: string; *)
-(*   twoddl: string; *)
-(*   tgx: string; *)
-(*   animetosho: string *)
-(* } [@@deriving jsoo] *)
-
 module CopyButton = struct
 
   let%prop tx = "light"
@@ -110,6 +103,14 @@ module LoadButton = struct
 end
 
 let locked = ref false
+
+let%data shows : episode_show list = []
+and path = "home"
+and query = ""
+and series : show list = []
+and serie : serie option = None
+and login : login = {username=""; password=""}
+and proxy : Idb.proxy = Idb.dummy_proxy
 
 let serie (app: all t) (id: int) =
   app##.serie := undefined;
@@ -215,7 +216,8 @@ let%meth set_outdated _app (s: show_jsoo t) =
 and refresh_episode app (id: int) =
   locked := true;
   Api.run @@
-  let>? new_shows = Api.get_unseen ~store:(Idb.manage_show app##.db) ~id (to_string app##.token) in
+  let order = order_of_jsoo app##.order in
+  let>? new_shows = Api.get_unseen ~store:(Idb.manage_show app##.db) ~id ~order (to_string app##.token) in
   match new_shows with
   | [] ->
     let shows = of_listf episode_show_to_jsoo @@
@@ -269,6 +271,14 @@ and switch_theme app : unit =
   set_body_class (Some ("bg-" ^ theme.t_bg));
   Idb.update_config ~key:"theme" app##.db s
 
+and change_order app : unit =
+  let order = match order_of_jsoo app##.order with `asc -> `desc | `desc -> `asc in
+  Idb.update_config ~key:"order" app##.db (match order with `asc -> "asc" | `desc -> "desc");
+  let shows = to_listf episode_show_of_jsoo app##.shows in
+  let shows = List.sort (Api.compare_episode_show ~order) shows in
+  app##.order := order_to_jsoo order;
+  app##.shows := of_listf episode_show_to_jsoo shows
+
 and update_episodes app (season: int) =
   let serie = to_optdef serie_of_jsoo app##.serie in
   match serie with
@@ -310,7 +320,8 @@ let my_series (app: all t) =
 
 let home (app: all t) =
   Api.run @@
-  let|>? shows = Api.get_unseen ~store:(Idb.manage_show app##.db) (to_string app##.token) in
+  let order = order_of_jsoo app##.order in
+  let|>? shows = Api.get_unseen ~store:(Idb.manage_show app##.db) ~order (to_string app##.token) in
   app##.shows := of_listf episode_show_to_jsoo shows
 
 let%meth route app path id =
@@ -374,28 +385,21 @@ and update_resolution app : unit =
 
 let () =
   Idb.open_db @@ fun db ->
-  Api.run (
-    let>? theme = Idb.get_config ~key:"theme" db in
-    let theme = match theme with
-      | Some "dark" -> set_body_class @@ Some "bg-dark"; dark_theme
-      | _ -> light_theme in
-    let>? token = Idb.get_config ~key:"token" db in
-    let>? resolution = Idb.get_config ~key:"resolution" db in
-    let resolution = Option.value ~default:"" resolution in
-    let>? proxies = Idb.get_proxies db in
-
-    let%data shows : episode_show list = []
-    and db : Ezjs_idb.Types.iDBDatabase t = db [@@noconv]
-    and token : string = Option.value ~default:"" token
-    and path = "home"
-    and query = ""
-    and series : show list = []
-    and theme : theme = theme
-    and serie : serie option = None
-    and login : login = {username=""; password=""}
-    and proxies : Idb.proxy list = proxies
-    and resolution = resolution
-    and copy_message = "copy"
-    and proxy : Idb.proxy = Idb.dummy_proxy in
-    let _app = [%app {conv; types; mount; unhide; export; components=[CopyButton; LoadButton]}] in
-    Lwt.return_ok ())
+  Api.run @@
+  let>? theme = Idb.get_config ~key:"theme" db in
+  let theme = match theme with
+    | Some "dark" -> set_body_class @@ Some "bg-dark"; dark_theme
+    | _ -> light_theme in
+  let>? token = Idb.get_config ~key:"token" db in
+  let>? resolution = Idb.get_config ~key:"resolution" db in
+  let>? order = Idb.get_config ~key:"order" db in
+  let resolution = Option.value ~default:"" resolution in
+  let>? proxies = Idb.get_proxies db in
+  let%data db : Ezjs_idb.Types.iDBDatabase t = db [@@noconv]
+  and token : string = Option.value ~default:"" token
+  and theme : theme = theme
+  and proxies : Idb.proxy list = proxies
+  and resolution = resolution
+  and order : order = match order with None | Some "asc" -> `asc | _ -> `desc in
+  let _app = [%app {conv; types; mount; unhide; export; components=[CopyButton; LoadButton]}] in
+  Lwt.return_ok ()

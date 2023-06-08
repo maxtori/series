@@ -95,3 +95,5 @@ type display_show = (show [@obj1 "show"]) [@@deriving encoding {ignore}]
 type display_episode = (episode [@obj1 "episode"]) [@@deriving encoding {ignore}]
 type search_shows = (show list [@obj1 "shows"]) [@@deriving encoding {ignore}]
 type episodes = (episode list [@obj1 "episodes"]) [@@deriving encoding {ignore}]
+
+type order = [ `desc | `asc ] [@@deriving jsoo {enum}]

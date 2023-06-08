@@ -60,7 +60,7 @@ let optl p f = function None -> [] | Some x -> [p, f x]
 
 let get_episodes ?(limit=1) ?(released=0) ?id token =
   let params = [limit_param, I limit; released_param, I released] @
-    (optl show_id_param (fun x -> I x) id) in
+               (optl show_id_param (fun x -> I x) id) in
   Lwt.map handle @@
   get0 ~msg:"episodes" base episodes ~headers:(headers (Some token)) ~params
 
@@ -157,8 +157,8 @@ let unarchive_show ~token id =
 
 let print_error p =
   Lwt.map (Result.fold ~ok:(fun () -> ()) ~error:(fun (code, l) ->
-      Format.eprintf "Error %d\n%s@." code
-        (EzEncoding.construct ~compact:false Types.errors_enc l))) p
+    Format.eprintf "Error %d\n%s@." code
+      (EzEncoding.construct ~compact:false Types.errors_enc l))) p
 
 let episode_status now date =
   if Cal.compare date now <= 0 then "out"
@@ -175,58 +175,71 @@ let format_show_title s =
     format_filename @@ String.trim @@ String.sub s 0 i
   else format_filename s
 
-let get_unseen ?(limit=1) ?(released=0) ?(period=Cal.Period.day 8) ?store ?id ?(fill=true) token =
-  let>? shows = get_episodes ~limit ~released ?id token in
+let compare_episode_show ?(order=`asc) s1 s2 =
+  match s1.es_episode, s2.es_episode with
+  | None, None -> String.compare s1.es_show.s_title s2.es_show.s_title
+  | Some _, None -> -1
+  | None, Some _ -> 1
+  | Some e1, Some e2 ->
+    match e1.e_date, e2.e_date with
+    | None, None -> 0
+    | Some _, None -> -1
+    | None, Some _ -> 1
+    | Some d1, Some d2 ->
+      match order with
+      | `asc -> Cal.compare d1 d2
+      | `desc ->
+        let now = Cal.today () in
+        let t1 = Cal.compare d1 now in
+        let t2 = Cal.compare d2 now in
+        let t = Cal.compare d1 d2 in
+        if t1 > 0 && t2 > 0 then t
+        else if t1 > 0 then 1
+        else if t2 > 0 then -1
+        else -t
+
+let unseen_episode ?store ?(fill=true) ?(period=Cal.Period.day 8) ~token ~show ~id acc episodes =
   let now = Cal.today () in
+  let get_show ffill =
+    if not fill then rok show
+    else match store with
+      | None ->
+        let|>? s = get_show ~token id in
+        ffill s
+      | Some (get, add, put, _delete) ->
+        let> s = get id in
+        match s with
+        | Error _ ->
+          let|>? s = get_show ~token id in
+          let s = ffill s in
+          put id s;
+          s
+        | Ok None ->
+          let|>? s = get_show ~token id in
+          let s = ffill s in
+          add id s;
+          s
+        | Ok (Some s) -> rok s in
+  match episodes with
+  | [] -> rok acc
+  | e :: _ ->
+    let e = {e with e_title = format_filename e.e_title} in
+    match e.e_date with
+    | None -> rok acc
+    | Some date ->
+      if Cal.(Period.compare (sub date now) period) < 0 then
+        let es_episode = Some {e with e_status = episode_status now date} in
+        let ffill s = {show with s_images = s.s_images; s_genres = s.s_genres} in
+        let|>? es_show = get_show ffill in
+        {es_show; es_episode} :: acc
+      else
+        rok acc
+
+let get_unseen ?(limit=1) ?(released=0) ?period ?store ?id ?fill ?order token =
+  let>? shows = get_episodes ~limit ~released ?id token in
   let|>? l = fold (fun acc s ->
-      let id = s.su_show.s_id in
-      let es_show = s.su_show in
-      match s.su_unseen with
-      | e :: _ ->
-        let e = {e with e_title = format_filename e.e_title} in
-        begin match e.e_date with
-          | None -> Lwt.return_ok acc
-          | Some date ->
-            if Cal.(Period.compare (sub date now) period) < 0 then
-              let es_episode = Some {e with e_status = episode_status now date} in
-              let ffill s = {es_show with s_images = s.s_images; s_genres = s.s_genres} in
-              let|>? es_show =
-                if not fill then Lwt.return_ok es_show
-                else match store with
-                  | None ->
-                    let|>? s = get_show ~token id in
-                    ffill s
-                  | Some (get, add, put, _delete) ->
-                    let> s = get id in
-                    match s with
-                    | Error _ ->
-                      let|>? s = get_show ~token id in
-                      let s = ffill s in
-                      put id s;
-                      s
-                    | Ok None ->
-                      let|>? s = get_show ~token id in
-                      let s = ffill s in
-                      add id s;
-                      s
-                    | Ok (Some s) ->
-                      Lwt.return_ok s in
-              {es_show; es_episode} :: acc
-            else
-              Lwt.return_ok acc
-        end
-      | _ -> Lwt.return_ok acc)
-      [] shows in
-  List.sort (fun s1 s2 ->
-      match s1.es_episode, s2.es_episode with
-      | None, None -> String.compare s1.es_show.s_title s2.es_show.s_title
-      | Some _, None -> -1
-      | None, Some _ -> 1
-      | Some e1, Some e2 ->
-        match e1.e_date, e2.e_date with
-        | None, None -> 0
-        | Some _, None -> -1
-        | None, Some _ -> 1
-        | Some d1, Some d2 -> Cal.compare d1 d2) l
+    unseen_episode ?store ?fill ?period ~token ~show:s.su_show ~id:s.su_show.s_id acc s.su_unseen
+  ) [] shows in
+  List.sort (compare_episode_show ?order) l
 
 let run p = EzLwtSys.run (fun () -> print_error p)

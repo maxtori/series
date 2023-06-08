@@ -34,8 +34,14 @@
               </li>
             </ul>
             <ul class="navbar-nav ms-auto">
-              <li class="nav-item">
-                <a class="nav-link me-3" @click="update_shows()" v-if="path=='home'" role="button">
+              <li class="nav-item" v-if="path=='home'">
+                <a class="nav-link me-3" @click="change_order()" role="button">
+                  <i v-if="order=='asc'" class="bi bi-sort-up"></i>
+                  <i v-else class="bi bi-sort-down"></i>
+                </a>
+              </li>
+              <li class="nav-item" v-if="path=='home'">
+                <a class="nav-link me-3" @click="update_shows()" role="button">
                   <i class="bi bi-arrow-clockwise"></i>
                 </a>
               </li>
