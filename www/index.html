@@ -92,7 +92,7 @@
             <div class="card flex-fill" :class="'text-bg-'+theme.bg">
               <div class="row g-0">
                 <div class="col-4 col-sm-2 d-flex">
-                  <img class="card-img-top" :src="s.show.images.poster" alt="poster" class="rounded-0" @error="set_outdated(s.show)" v-if="!s.show.outdated && s.show.images.poster!=undefined" style="object-fit: contain" loading="lazy">
+                  <img class="card-img-top" :src="s.show.images.poster.url" alt="poster" class="rounded-0" @error="set_outdated(s.show)" v-if="!s.show.outdated && s.show.images.poster!=undefined" style="object-fit: contain" loading="lazy">
                   <div v-else class="d-flex flex-fill justify-content-center">
                     <button @click="update_show(s.show, false)" class="btn btn-secondary align-self-center">
                       <i class="bi bi-arrow-clockwise"></i>
@@ -115,9 +115,7 @@
                       </div>
                       <div class="row g-0">
                         <div class="col-12 col-sm-6 d-flex justify-content-around my-2">
-                          <span v-for="p in proxies">
-                            <a v-if="p.for_anime && Object.keys(s.show.genres).includes('Animation') || !p.for_anime" :class="'btn btn-'+variant(s.episode)" :href="p.url+encodeURIComponent(s.show.title+' '+(p.with_code ? s.episode.code : '')+resolution)+p.post_url" target="_blank">{{ p.name }}</a>
-                          </span>
+                          <a v-for="p in proxies" v-show="p.kind=='anime' && Object.keys(s.show.genres).includes('Animation') || p.kind=='series' && !Object.keys(s.show.genres).includes('Animation') || p.kind=='both'" :class="'btn btn-'+variant(s.episode)" :href="p.url+encodeURIComponent(s.show.title+' '+(p.with_code ? s.episode.code : '')+resolution)+p.post_url" target="_blank">{{ p.name }}</a>
                         </div>
                         <div class="col-12 col-sm-6 d-flex justify-content-around my-2">
                           <load-button :variant="s.episode.user.downloaded ? 'success' : 'outline-secondary'" :action="() => downloaded(s.episode)">Downloaded</load-button>
@@ -142,7 +140,7 @@
             <div class="card flex-fill" :class="'text-bg-'+theme.bg">
               <div class="row g-0">
                 <div class="col-4 col-sm-2 d-flex">
-                  <img class="card-img-top" :src="s.images.poster" alt="poster" class="rounded-0" v-if="s.images.poster!=undefined" style="object-fit: contain" loading="lazy">
+                  <img class="card-img-top" :src="s.images.poster.url" alt="poster" class="rounded-0" v-if="s.images.poster!=undefined" style="object-fit: contain" loading="lazy">
                 </div>
                 <div class="col-8 col-sm-10 d-flex">
                   <div class="card-body d-flex flex-column justify-content-between">
@@ -183,7 +181,7 @@
             <div class="card flex-fill" :class="'text-bg-'+theme.bg">
               <div class="row g-0">
                 <div class="col-2 d-flex">
-                  <img class="card-img-top" :src="serie.show.images.poster" alt="poster" class="rounded-0" style="object-fit: contain">
+                  <img class="card-img-top" :src="serie.show.images.poster?.url" alt="poster" class="rounded-0" style="object-fit: contain">
                 </div>
                 <div class="col-10 d-flex">
                   <div class="card-body d-flex flex-column justify-content-between">
@@ -272,7 +270,7 @@
                     <td>{{ p.name }}</td>
                     <td>{{ p.url + '{query}' + p.post_url }}</td>
                     <td>{{ p.with_code }}</td>
-                    <td>{{ p.for_anime }}</td>
+                    <td>{{ p.kind }}</td>
                     <td>
                       <button class="btn btn-danger btn-sm" @click="remove_proxy(p.name, i)">
                         <i class="bi bi-trash"></i>
@@ -303,16 +301,20 @@
                   </div>
                 </div>
                 <div class="row">
-                  <div class="col-3 offset-2">
+                  <div class="offset-1 col-5">
+                    <div class="input-group mb-2">
+                      <span class="input-group-text">kind</span>
+                      <select v-model="proxy.kind">
+                        <option value="both" selected>both</option>
+                        <option value="anime">anime</option>
+                        <option value="series">series</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="offset-1 col-2 align-self-center">
                     <div class="form-check">
                       <input class="form-check-input" type="checkbox" v-model="proxy.with_code">
                       <label class="form-check-label">Use with code</label>
-                    </div>
-                  </div>
-                  <div class="col-3 offset-2">
-                    <div class="form-check">
-                      <input class="form-check-input" type="checkbox" v-model="proxy.for_anime">
-                      <label class="form-check-label">Use for Anime</label>
                     </div>
                   </div>
                 </div>

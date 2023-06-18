@@ -6,12 +6,12 @@ open Ezjs_idb
 type proxy = {
   p_name: string;
   p_url: string;
-  p_for_anime: bool;
+  p_kind: [`anime | `series | `both]; [@enum]
   p_with_code: bool;
   p_post_url: string;
 } [@@deriving jsoo]
 
-let dummy_proxy = {p_name=""; p_url=""; p_with_code=true; p_for_anime=false; p_post_url=""}
+let dummy_proxy = {p_name=""; p_url=""; p_with_code=true; p_kind=`both; p_post_url=""}
 
 type version = {
   version: int;

@@ -13,6 +13,12 @@ type tsp = Cal.t [@encoding conv CalendarLib.Printer.Date.to_string CalendarLib.
   let tsp_jsoo_conv = tsp_to_jsoo, tsp_of_jsoo
 ]
 
+type json = Json_repr.ezjsonm [@@deriving encoding]
+[@@@jsoo
+  type json_jsoo = Ezjs_min.Unsafe.top
+  let json_to_jsoo = Js_json.js_of_json
+  let json_of_jsoo = Js_json.json_of_js]
+
 type user = {
   u_id: int;
   u_login: string;
@@ -70,7 +76,7 @@ type show = {
   [@dft []] [@assoc] [@encoding union [
     case (list (tup2 string string)) (function [] -> Some [] | _ -> None) (fun l -> l);
     case (assoc string) (fun l -> Some l) (fun l -> l)]]
-  s_images: (string * string option) list; [@assoc] [@dft []]
+  s_images: (string * [`url of string | `json of json]) list; [@assoc] [@dft []]
   s_outdated: bool; [@exclude false] [@mutable]
   s_description: string; [@dft ""]
   s_creation: string; [@dft ""]

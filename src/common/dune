@@ -13,7 +13,7 @@
  (modules types)
  (preprocessor_deps (env_var "PPX_ENCODING_MODULE") (env_var "PPX_JSOO_FAKE"))
  (preprocess (pps ppx_deriving_encoding ppx_deriving_jsoo ppx_deriving_empty))
- (libraries hex calendar))
+ (libraries hex calendar ez_api.encoding))
 
 (library
  (name api)
