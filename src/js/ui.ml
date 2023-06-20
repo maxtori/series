@@ -112,8 +112,13 @@ and serie : serie option = None
 and login : login = {username=""; password=""}
 and proxy : Idb.proxy = Idb.dummy_proxy
 
-let serie (app: all t) (id: int) =
+let clear ?(query=true) app =
   app##.serie := undefined;
+  app##.series := of_list [];
+  if query then app##.query := string ""
+
+let serie (app: all t) (id: int) =
+  clear app;
   Api.run @@
   let>? show = Idb.get_show app##.db id in
   let>? se_show = match show with
@@ -301,24 +306,25 @@ and change_title app (s: js_string t) : unit =
     Idb.put_show app##.db show.s_id {show with s_title = to_string s} [@@noconv]
 
 let search (app: all t) =
-  app##.series := of_list [];
+  clear ~query:false app;
   Api.run @@
   let|>? searches = Api.search_shows ~token:(to_string app##.token) (to_string app##.query) in
   app##.series := of_listf show_to_jsoo searches
 
 let discover (app: all t) =
-  app##.series := of_list [];
+  clear app;
   Api.run @@
   let|>? series = Api.discover ~token:(to_string app##.token) () in
   app##.series := of_listf show_to_jsoo series
 
 let my_series (app: all t) =
-  app##.series := of_list [];
+  clear app;
   Api.run @@
   let|>? series = Api.my_shows (to_string app##.token) in
   app##.series := of_listf show_to_jsoo series
 
 let home (app: all t) =
+  clear app;
   Api.run @@
   let order = order_of_jsoo app##.order in
   let|>? shows = Api.get_unseen ~store:(Idb.manage_show app##.db) ~order (to_string app##.token) in

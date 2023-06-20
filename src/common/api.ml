@@ -189,9 +189,9 @@ let compare_episode_show ?(order=`asc) s1 s2 =
       match order with
       | `asc -> Cal.compare d1 d2
       | `desc ->
-        let now = Cal.today () in
-        let t1 = Cal.compare d1 now in
-        let t2 = Cal.compare d2 now in
+        let tomorrow = Cal.(next (today ()) `Day) in
+        let t1 = Cal.compare d1 tomorrow in
+        let t2 = Cal.compare d2 tomorrow in
         let t = Cal.compare d1 d2 in
         if t1 > 0 && t2 > 0 then t
         else if t1 > 0 then 1
