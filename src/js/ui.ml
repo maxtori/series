@@ -22,16 +22,24 @@ module CopyButton = struct
   and episode : episode = {req}
   and placement = "top"
 
+  let%data copied = false
+
+  let apply app tp b =
+    app##.copied := bool b;
+    Opt.iter tp (fun tp ->
+      let msg = if b then "copied!" else "copy" in
+      ignore @@ tp##setContent (Unsafe.obj [| ".tooltip-inner", Unsafe.inject (string msg) |]))
+
   let%meth copy app =
     let tp = Unsafe.global##.bootstrap##._Tooltip##getInstance [%el app] in
     let s = string @@ Format.sprintf "%s - %s - %s"
         (Api.format_show_title (to_string app##.show##.title)) (to_string app##.episode##.code_fmt_)
         (Api.format_filename @@ to_string app##.episode##.title) in
     ignore @@ Unsafe.global##.self##.navigator##.clipboard##writeText s;
-    match Opt.to_option tp with
-    | None -> ()
-    | Some tp ->
-      ignore @@ tp##setContent (Unsafe.obj [| ".tooltip-inner", Unsafe.inject (string "copied!") |])
+    apply app tp true;
+    ignore @@ Dom_html.window##setTimeout
+      (wrap_callback @@ fun () -> apply app tp false)
+      5000.
 
   [%%mounted fun app ->
     let cs : _ constr = Unsafe.global##.bootstrap##._Tooltip in
@@ -42,7 +50,7 @@ module CopyButton = struct
 
   {%%template|
   <button @click="copy()" :class="'btn btn-outline-'+tx" data-bs-toggle="tooltip" :data-bs-placement="placement" data-bs-trigger="hover" data-bs-title="copy" data-bs-container="#app">
-    <i class="bi bi-clipboard"></i>
+    <i :class="copied ? 'bi bi-clipboard-check-fill' : 'bi bi-clipboard'"></i>
   </button>
   |}
 end
