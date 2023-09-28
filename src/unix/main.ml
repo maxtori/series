@@ -77,11 +77,11 @@ let main () =
   let>? token = get_token () in
   let|>? shows = Api.get_unseen ~fill:false token in
   List.iter (fun s ->
-      match s.es_episode with
-      | None -> ()
-      | Some e ->
-        if e.e_user.eu_downloaded then handle_episode_files s.es_show e
-    ) shows
+    match s.es_episode with
+    | None -> ()
+    | Some e ->
+      if e.e_user.eu_downloaded then handle_episode_files s.es_show e
+  ) shows
 
 let () =
   let specs = [

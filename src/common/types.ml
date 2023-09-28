@@ -74,8 +74,8 @@ type show = {
   s_title: string; [@mutable]
   s_genres: (string * string) list;
   [@dft []] [@assoc] [@encoding union [
-    case (list (tup2 string string)) (function [] -> Some [] | _ -> None) (fun l -> l);
-    case (assoc string) (fun l -> Some l) (fun l -> l)]]
+  case (list (tup2 string string)) (function [] -> Some [] | _ -> None) (fun l -> l);
+  case (assoc string) (fun l -> Some l) (fun l -> l)]]
   s_images: (string * [`url of string | `json of json]) list; [@assoc] [@dft []]
   s_outdated: bool; [@exclude false] [@mutable]
   s_description: string; [@dft ""]

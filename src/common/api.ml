@@ -19,12 +19,14 @@ let errors = [
   Err.Case {code=400; name="error"; encoding=errors_enc;
             select=Option.some; deselect=(fun x -> x)} ]
 
-[@@@post {name="auth"; path="/members/auth"; output=auth_enc;
-          params=[login_param; pwd_param]; errors}]
+[%%post {
+  name="auth"; path="/members/auth"; output=auth_enc;
+  params=[login_param; pwd_param]; errors } ]
 
-[@@@get { name="is_active"; path="/members/is_active";
-          output=Json_encoding.unit;
-          params=[login_param; pwd_param]; errors}]
+[%%get {
+  name="is_active"; path="/members/is_active";
+  output=Json_encoding.unit;
+  params=[login_param; pwd_param]; errors } ]
 
 let hash_pwd pwd = Hex.(show @@ of_string @@ Digest.string pwd)
 
@@ -53,8 +55,9 @@ let season_param = Param.int "season"
 let order_param = Param.string "order"
 let status_param = Param.string "status"
 
-[@@@get {name="episodes"; path="/episodes/list"; errors;
-         output=list_shows_enc; params=[limit_param; released_param; show_id_param]}]
+[%%get {
+  name="episodes"; path="/episodes/list"; errors;
+  output=list_shows_enc; params=[limit_param; released_param; show_id_param] } ]
 
 let optl p f = function None -> [] | Some x -> [p, f x]
 
@@ -64,11 +67,13 @@ let get_episodes ?(limit=1) ?(released=0) ?id token =
   Lwt.map handle @@
   get0 ~msg:"episodes" base episodes ~headers:(headers (Some token)) ~params
 
-[@@@post {name="downloaded"; path="/episodes/downloaded"; errors;
-          output=display_episode_enc; params=[id_param]}]
+[%%post {
+  name="downloaded"; path="/episodes/downloaded"; errors;
+  output=display_episode_enc; params=[id_param] } ]
 
-[@@@delete {name="undownloaded"; path="/episodes/downloaded"; errors;
-            output=display_episode_enc; params=[id_param]}]
+[%%delete {
+  name="undownloaded"; path="/episodes/downloaded"; errors;
+  output=display_episode_enc; params=[id_param] } ]
 
 let downloaded ~token id b =
   let params = [id_param, I id] in
@@ -76,11 +81,13 @@ let downloaded ~token id b =
   Lwt.map handle @@
   post0 ~msg:"downloaded" base s ~input:() ~headers:(headers (Some token)) ~params
 
-[@@@post {name="watched"; path="/episodes/watched"; errors;
-          output=display_episode_enc; params=[id_param]}]
+[%%post {
+  name="watched"; path="/episodes/watched"; errors;
+  output=display_episode_enc; params=[id_param] } ]
 
-[@@@delete {name="unwatched"; path="/episodes/watched"; errors;
-            output=display_episode_enc; params=[id_param]}]
+[%%delete {
+  name="unwatched"; path="/episodes/watched"; errors;
+  output=display_episode_enc; params=[id_param] } ]
 
 let watched ~token id b =
   let params = [id_param, I id] in
@@ -90,7 +97,7 @@ let watched ~token id b =
 
 (* SHOW *)
 
-[@@@get {name="show"; path="/shows/display"; errors; output=display_show_enc; params=[id_param]}]
+[%%get { name="show"; path="/shows/display"; errors; output=display_show_enc; params=[id_param] } ]
 
 let get_show ?token id =
   Lwt.map handle @@
@@ -98,14 +105,14 @@ let get_show ?token id =
 
 let title_param = Param.string "title"
 
-[@@@get {name="search"; path="/shows/search"; errors; output=search_shows_enc; params=[title_param]}]
+[%%get { name="search"; path="/shows/search"; errors; output=search_shows_enc; params=[title_param] } ]
 
 let search_shows ?token title =
   Lwt.map handle @@
   get0 ~msg:"search" base search ~headers:(headers token) ~params:[title_param, S title]
 
-[@@@post {name="add_show"; path="/shows/show"; errors; output=display_show_enc; params=[id_param]}]
-[@@@delete {name="remove_show"; path="/shows/show"; errors; output=display_show_enc; params=[id_param]}]
+[%%post { name="add_show"; path="/shows/show"; errors; output=display_show_enc; params=[id_param] } ]
+[%%delete { name="remove_show"; path="/shows/show"; errors; output=display_show_enc; params=[id_param] } ]
 
 let add_show ~token id =
   Lwt.map handle @@
@@ -117,14 +124,15 @@ let remove_show ~token id =
   post0 ~msg:"remove" base remove_show ~headers:(headers (Some token))
     ~params:[id_param, I id] ~input:()
 
-[@@@get {name="discover"; path="/shows/discover"; errors; output=search_shows_enc}]
+[%%get { name="discover"; path="/shows/discover"; errors; output=search_shows_enc } ]
 
 let discover ?token () =
   Lwt.map handle @@
   get0 ~msg:"discover" base discover ~headers:(headers token)
 
-[@@@get {name="show_episodes"; path="/shows/episodes"; errors; output=episodes_enc;
-         params=[id_param; season_param]}]
+[%%get {
+  name="show_episodes"; path="/shows/episodes"; errors; output=episodes_enc;
+  params=[id_param; season_param] } ]
 
 let get_show_episodes ?token ?season id =
   let params = optl season_param (fun x -> I x) season in
@@ -132,16 +140,17 @@ let get_show_episodes ?token ?season id =
   get0 ~msg:"show_episodes" base show_episodes ~headers:(headers token)
     ~params:((id_param, I id) :: params)
 
-[@@@get {name="my_shows"; path="/shows/member"; errors; output=search_shows_enc;
-         params=[order_param; status_param]}]
+[%%get {
+  name="my_shows"; path="/shows/member"; errors; output=search_shows_enc;
+  params=[order_param; status_param] } ]
 
 let my_shows ?(order="last_seen") ?(status="active") token =
   let params = [order_param, S order; status_param, S status] in
   Lwt.map handle @@
   get0 ~msg:"my_shows" base my_shows ~headers:(headers (Some token)) ~params
 
-[@@@post {name="archive"; path="/shows/archive"; errors; output=display_show_enc; params=[id_param]}]
-[@@@delete {name="unarchive"; path="/shows/archive"; errors; output=display_show_enc; params=[id_param]}]
+[%%post { name="archive"; path="/shows/archive"; errors; output=display_show_enc; params=[id_param] } ]
+[%%delete { name="unarchive"; path="/shows/archive"; errors; output=display_show_enc; params=[id_param] } ]
 
 let archive_show ~token id =
   Lwt.map handle @@

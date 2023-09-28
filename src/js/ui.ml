@@ -49,9 +49,9 @@ module CopyButton = struct
   [%%comp {conv}]
 
   {%%template|
-  <button @click="copy()" :class="'btn btn-outline-'+tx" data-bs-toggle="tooltip" :data-bs-placement="placement" data-bs-trigger="hover" data-bs-title="copy" data-bs-container="#app">
-    <i :class="copied ? 'bi bi-clipboard-check-fill' : 'bi bi-clipboard'"></i>
-  </button>
+   <button @click="copy()" :class="'btn btn-outline-'+tx" data-bs-toggle="tooltip" :data-bs-placement="placement" data-bs-trigger="hover" data-bs-title="copy" data-bs-container="#app">
+     <i :class="copied ? 'bi bi-clipboard-check-fill' : 'bi bi-clipboard'"></i>
+   </button>
   |}
 end
 
@@ -98,14 +98,14 @@ module LoadButton = struct
   [%%comp {conv}]
 
   {%%template|
-  <button @click="process()" :class="button_class" :style="button_style">
-    <span v-if="!loading">
-      <slot>
-      </slot>
-    </span>
-    <span v-else :class="spinner_kind+' '+spinner_kind+'-sm '+text_class" role="status">
-    </span>
-  </button>
+   <button @click="process()" :class="button_class" :style="button_style">
+     <span v-if="!loading">
+       <slot>
+       </slot>
+     </span>
+     <span v-else :class="spinner_kind+' '+spinner_kind+'-sm '+text_class" role="status">
+     </span>
+   </button>
   |}
 
 end
