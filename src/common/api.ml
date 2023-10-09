@@ -19,6 +19,14 @@ let errors = [
   Err.Case {code=400; name="error"; encoding=errors_enc;
             select=Option.some; deselect=(fun x -> x)} ]
 
+let verbose = ref false
+let get0 ?msg ?headers ?params base service =
+  let msg = if !verbose then msg else None in
+  get0 ?msg ?headers ?params base service
+let post0 ?msg ?headers ?params base service =
+  let msg = if !verbose then msg else None in
+  post0 ?msg ?headers ?params ~input:() base service
+
 [%%post {
   name="auth"; path="/members/auth"; output=auth_enc;
   params=[login_param; pwd_param]; errors } ]
@@ -38,7 +46,7 @@ let handle = function
 
 let request_token ~login ~password =
   Lwt.map handle @@
-  post0 ~msg:"auth" base auth ~input:() ~headers:(headers None)
+  post0 ~msg:"auth" base auth ~headers:(headers None)
     ~params:[login_param, S login; pwd_param, S (hash_pwd password)]
 
 let active_token token =
@@ -79,7 +87,7 @@ let downloaded ~token id b =
   let params = [id_param, I id] in
   let s = if b then downloaded else undownloaded in
   Lwt.map handle @@
-  post0 ~msg:"downloaded" base s ~input:() ~headers:(headers (Some token)) ~params
+  post0 ~msg:"downloaded" base s ~headers:(headers (Some token)) ~params
 
 [%%post {
   name="watched"; path="/episodes/watched"; errors;
@@ -93,7 +101,7 @@ let watched ~token id b =
   let params = [id_param, I id] in
   let s = if b then watched else unwatched in
   Lwt.map handle @@
-  post0 ~msg:"watched" base s ~input:() ~headers:(headers (Some token)) ~params
+  post0 ~msg:"watched" base s ~headers:(headers (Some token)) ~params
 
 (* SHOW *)
 
@@ -117,12 +125,12 @@ let search_shows ?token title =
 let add_show ~token id =
   Lwt.map handle @@
   post0 ~msg:"add" base add_show ~headers:(headers (Some token))
-    ~params:[id_param, I id] ~input:()
+    ~params:[id_param, I id]
 
 let remove_show ~token id =
   Lwt.map handle @@
   post0 ~msg:"remove" base remove_show ~headers:(headers (Some token))
-    ~params:[id_param, I id] ~input:()
+    ~params:[id_param, I id]
 
 [%%get { name="discover"; path="/shows/discover"; errors; output=search_shows_enc } ]
 
@@ -155,12 +163,12 @@ let my_shows ?(order="last_seen") ?(status="active") token =
 let archive_show ~token id =
   Lwt.map handle @@
   post0 ~msg:"archive" base archive ~headers:(headers (Some token))
-    ~params:[id_param, I id] ~input:()
+    ~params:[id_param, I id]
 
 let unarchive_show ~token id =
   Lwt.map handle @@
   post0 ~msg:"unarchive" base unarchive ~headers:(headers (Some token))
-    ~params:[id_param, I id] ~input:()
+    ~params:[id_param, I id]
 
 (* MAIN *)
 

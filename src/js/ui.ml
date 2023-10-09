@@ -125,9 +125,15 @@ let clear ?(query=true) app =
   app##.series := of_list [];
   if query then app##.query := string ""
 
+let get_state app state =
+  let state = Unsafe.coerce state in
+  app##.path := state##.path;
+  app##.shows := state##.shows;
+  app##.series := state##.series;
+  app##.serie := state##.serie
+
 let serie (app: all t) (id: int) =
   clear app;
-  Api.run @@
   let>? show = Idb.get_show app##.db id in
   let>? se_show = match show with
     | None ->
@@ -149,20 +155,22 @@ let set_body_class = function
   | None -> Dom_html.document##.body##removeAttribute (string "class")
   | Some c -> Dom_html.document##.body##setAttribute (string "class") (string c)
 
-let file_path = ref false
-let set_file_path () =
-  match Url.url_of_string (to_string Dom_html.window##.location##.href) with
-  | Some (Url.File _) -> file_path := true
-  | _ -> ()
+let file_path = ref None
 
-let set_path ?(scroll=true) ?(args=[]) s =
-  if not !file_path then
-    let args = match args with
-      | [] -> ""
-      | l -> "?" ^ String.concat "&" @@ List.map (fun (k, v) -> k ^ "=" ^ v) l in
-    let path = some @@ string @@ "/" ^ s ^ args in
-    Dom_html.window##.history##pushState path (string "") path;
-    if scroll then Dom_html.window##scroll 0 0
+let set_state ?(scroll=true) app id =
+  let path = match !file_path with
+    | Some f -> f
+    | None ->
+      "/" ^ (to_string app##.path) ^
+      (match Optdef.to_option id with None -> "" | Some id -> "?id=" ^ string_of_int id) in
+  let state = object%js
+    val path = app##.path
+    val shows = Unsafe.global##._Vue##toRaw app##.shows
+    val series = Unsafe.global##._Vue##toRaw app##.series
+    val serie = Unsafe.global##._Vue##toRaw app##.serie
+  end in
+  Dom_html.window##.history##pushState (some @@ Unsafe.coerce state) (string "")  (some @@ string path);
+  if scroll then Dom_html.window##scroll 0 0
 
 let get_path () =
   match Url.url_of_string (to_string Dom_html.window##.location##.href) with
@@ -170,7 +178,6 @@ let get_path () =
   | Some url -> match url with
     | Url.Http hu | Url.Https hu -> String.concat "/" hu.Url.hu_path, hu.Url.hu_arguments
     | Url.File fu -> String.concat "/" fu.Url.fu_path, []
-
 
 let%meth copy _app (show: show) (e: episode) (id : int) =
   let tp = Unsafe.global##.bootstrap##._Tooltip##getInstance (string ("#copy-" ^ string_of_int id)) in
@@ -209,7 +216,7 @@ and variant _app (e: episode) : string =
 
 let%meth rec update_show app (s: show) (reset: bool) =
   Api.run @@
-  let|>? s2 = Api.get_show ~token:(to_string app##.token) s.s_id in
+  let>? s2 = Api.get_show ~token:(to_string app##.token) s.s_id in
   let es_show = {s2 with s_title = s.s_title; s_outdated = false} in
   Idb.put_show app##.db s.s_id es_show;
   List.iteri
@@ -217,7 +224,7 @@ let%meth rec update_show app (s: show) (reset: bool) =
        if ss.es_show.s_id = s.s_id then
          ignore @@ app##.shows##splice_1 i 1 (episode_show_to_jsoo {ss with es_show}))
     (to_listf episode_show_of_jsoo app##.shows);
-  if reset then serie app s.s_id else ()
+  if reset then serie app s.s_id else Lwt.return_ok ()
 
 and update_shows app =
   let shows = to_listf episode_show_of_jsoo app##.shows in
@@ -315,44 +322,48 @@ and change_title app (s: js_string t) : unit =
 
 let search (app: all t) =
   clear ~query:false app;
-  Api.run @@
   let|>? searches = Api.search_shows ~token:(to_string app##.token) (to_string app##.query) in
   app##.series := of_listf show_to_jsoo searches
 
 let discover (app: all t) =
   clear app;
-  Api.run @@
   let|>? series = Api.discover ~token:(to_string app##.token) () in
   app##.series := of_listf show_to_jsoo series
 
 let my_series (app: all t) =
   clear app;
-  Api.run @@
   let|>? series = Api.my_shows (to_string app##.token) in
   app##.series := of_listf show_to_jsoo series
 
 let home (app: all t) =
   clear app;
-  Api.run @@
   let order = order_of_jsoo app##.order in
   let|>? shows = Api.get_unseen ~store:(Idb.manage_show app##.db) ~order (to_string app##.token) in
   app##.shows := of_listf episode_show_to_jsoo shows
 
 let%meth route app path id =
+  if !Api.verbose then
+    log "route %S%s" (to_string path) @@
+    Option.fold ~none:"" ~some:(fun id -> "("^ string_of_int id ^")") @@
+    Optdef.to_option id;
   app##.path := path;
-  let path = to_string path in
-  let args = match path with
-    | "search" -> search app; []
-    | "discover" -> discover app; []
-    | "my_series" -> my_series app; []
-    | "login" | "settings" -> []
+  Api.run @@
+  let|>? () = match to_string path with
+    | "search" -> search app
+    | "discover" -> discover app
+    | "my_series" -> my_series app
+    | "login" | "settings" -> Lwt.return_ok ()
     | "serie" ->
       begin match Optdef.to_option id with
-        | None -> home app; app##.path := string "home"; []
-        | Some id -> serie app id; ["id", string_of_int id]
+        | None ->
+          let|>? () = home app in
+          app##.path := string "home"
+        | Some id -> serie app id
       end
-    | _ -> home app; app##.path := string "home"; [] in
-  set_path ~args path
+    | _ ->
+      let|>? () = home app in
+      app##.path := string "home" in
+  set_state app id
 
 let%meth sign_out app =
   Idb.remove_config ~key:"token" app##.db;
@@ -378,13 +389,13 @@ and remove_proxy app name i =
 and update_resolution app : unit =
   Idb.update_config ~key:"resolution" app##.db (to_string app##.resolution)
 
+let set_file_path () =
+  let s = to_string Dom_html.window##.location##.href in
+  match Url.url_of_string s with
+  | Some Url.File _ -> file_path := Some s
+  | _ -> ()
+
 [%%mounted (fun app ->
-  let f () =
-    let path, args = get_path () in
-    let id = optdef int_of_string @@ List.assoc_opt "id" args in
-    route app (string path) id in
-  Dom_html.window##.onpopstate := Dom_html.handler (fun _e -> f (); _true);
-  set_file_path ();
   match to_string app##.token with
   | "" -> Lwt.return_ok @@ route app (string "login") undefined
   | token ->
@@ -392,12 +403,16 @@ and update_resolution app : unit =
     Lwt.return_ok @@
     if active then (
       app##.token := string token;
-      f ())
+      let path, args = get_path () in
+      let id = optdef int_of_string @@ List.assoc_opt "id" args in
+      route app (string path) id)
     else (
       Idb.remove_config ~key:"token" app##.db;
-      route app (string "login") undefined))]
+      route app (string "login") undefined))
+]
 
 let () =
+  set_file_path ();
   Idb.open_db @@ fun db ->
   Api.run @@
   let>? theme = Idb.get_config ~key:"theme" db in
@@ -415,5 +430,7 @@ let () =
   and proxies : Idb.proxy list = proxies
   and resolution = resolution
   and order : order = match order with None | Some "asc" -> `asc | _ -> `desc in
-  let _app = [%app {conv; types; mount; unhide; export; components=[CopyButton; LoadButton]}] in
+  let app = [%app {conv; types; mount; unhide; export; components=[CopyButton; LoadButton]}] in
+  Dom_html.window##.onpopstate := Dom_html.handler (fun (e : Dom_html.popStateEvent t) ->
+    get_state app e##.state; _false);
   Lwt.return_ok ()
