@@ -19,49 +19,75 @@
       <div class="navbar navbar-expand-sm sticky-top" :class="'bg-'+theme.bg+' '+theme.navbar">
         <div class="container-fluid">
           <div class="navbar-brand" @click="route('home', undefined)" role="button">
-            <img src="series_192.png" alt="Logo" style="width:40px;">
+            <img src="series_192.png" alt="Logo" width="40">
           </div>
           <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav-collapse">
             <span class="navbar-toggler-icon"></span>
           </button>
           <div class="collapse navbar-collapse" id="nav-collapse">
             <ul class="navbar-nav">
-              <li class="nav-item">
+              <li class="nav-item text-center">
                 <a class="nav-link" :class="(path=='my_series') ? 'active' : ''" @click="route('my_series', undefined)" role="button">My Series</a>
               </li>
-              <li class="nav-item">
+              <li class="nav-item text-center">
                 <a class="nav-link" :class="(path=='discover') ? 'active' : ''" @click="route('discover', undefined)" role="button">Discover</a>
               </li>
             </ul>
             <ul class="navbar-nav ms-auto">
-              <li class="nav-item" v-if="path=='home'">
+              <li class="nav-item d-sm-none">
+                <div class="input-group me-3">
+                  <input class="form-control" v-model="query" @keyup.enter="route('search', undefined)">
+                  <button class="btn btn-primary" @click="route('search', undefined)">Search</button>
+                </div>
+              </li>
+              <li class="nav-item d-none d-sm-flex" v-if="path=='home'">
                 <a class="nav-link me-3" @click="change_order()" role="button">
                   <i v-if="order=='asc'" class="bi bi-sort-up"></i>
                   <i v-else class="bi bi-sort-down"></i>
                 </a>
               </li>
-              <li class="nav-item" v-if="path=='home'">
+              <li class="nav-item d-none d-sm-flex" v-if="path=='home'">
                 <a class="nav-link me-3" @click="update_shows()" role="button">
                   <i class="bi bi-arrow-clockwise"></i>
                 </a>
               </li>
-              <li class="nav-item">
+              <li class="nav-item d-none d-sm-flex">
                 <a class="nav-link me-3" @click="switch_theme()" role="button">
-                  <i :class="'bi bi-'+theme.icon+' text-'+theme.icon_variant"></i>
+                  <i :class="'bi bi-'+theme.icon"></i>
                 </a>
               </li>
-              <div class="input-group">
-                <input class="form-control" v-model="query" @keyup.enter="route('search', undefined)">
-                <button class="btn btn-primary" @click="route('search', undefined)">Search</button>
-              </div>
-              <li class="nav-item">
-                <a class="nav-link ms-3" :class="(path=='settings') ? 'active' : ''" @click="route('settings', undefined)" role="button">
+              <li class="nav-item d-none d-sm-flex">
+                <div class="input-group me-3">
+                  <input class="form-control" v-model="query" @keyup.enter="route('search', undefined)">
+                  <button class="btn btn-primary" @click="route('search', undefined)">Search</button>
+                </div>
+              </li>
+              <li class="nav-item d-none d-sm-flex">
+                <a class="nav-link me-3" :class="(path=='settings') ? 'active' : ''" @click="route('settings', undefined)" role="button">
                   <i class="bi bi-gear-fill"></i>
                 </a>
               </li>
-              <li class="nav-item">
-                <a class="nav-link ms-3" @click="sign_out()" role="button">
-                  <i :class="'bi bi-lock-fill text-'+theme.icon_variant"></i>
+              <li class="nav-item d-none d-sm-flex">
+                <a class="nav-link me-3 float-right" @click="sign_out()" role="button">
+                  <i class="bi bi-lock-fill"></i>
+                </a>
+              </li>
+              <li class="nav-item d-sm-none d-flex justify-content-around">
+                <a class="nav-link me-3" @click="change_order()" role="button">
+                  <i v-if="order=='asc'" class="bi bi-sort-up"></i>
+                  <i v-else class="bi bi-sort-down"></i>
+                </a>
+                <a class="nav-link me-3" @click="update_shows()" role="button">
+                  <i class="bi bi-arrow-clockwise"></i>
+                </a>
+                <a class="nav-link me-3" @click="switch_theme()" role="button">
+                  <i :class="'bi bi-'+theme.icon"></i>
+                </a>
+                <a class="nav-link me-3" :class="(path=='settings') ? 'active' : ''" @click="route('settings', undefined)" role="button">
+                  <i class="bi bi-gear-fill"></i>
+                </a>
+                <a class="nav-link me-3 float-right" @click="sign_out()" role="button">
+                  <i class="bi bi-lock-fill"></i>
                 </a>
               </li>
             </ul>
@@ -106,10 +132,10 @@
                     </div>
                     <div v-if="s.episode!=undefined">
                       <div class="row pb-4 d-flex align-items-center text-center">
-                        <div class="col-3">{{ s.episode.code_fmt }}</div>
-                        <div class="col-4 text-center">{{ s.episode.title }}</div>
-                        <div class="col-3">{{ s.episode.date.toLocaleDateString("fr-FR") }}</div>
-                        <div class="col-2">
+                        <div class="col-4 col-sm-3 order-0">{{ s.episode.code_fmt }}</div>
+                        <div class="col-8 col-sm-4 text-center order-2 order-sm-1">{{ s.episode.title }}</div>
+                        <div class="col-8 col-sm-3 order-1 order-sm-2">{{ s.episode.date.toLocaleDateString("fr-FR") }}</div>
+                        <div class="col-4 col-sm-2 order-3">
                           <copy-button :show="s.show" :episode="s.episode" :tx="theme.tx"></copy-button>
                         </div>
                       </div>
@@ -117,9 +143,20 @@
                         <div class="col-12 col-sm-6 d-flex justify-content-around my-2">
                           <a v-for="p in proxies" v-show="p.kind=='anime' && Object.keys(s.show.genres).includes('Animation') || p.kind=='series' && !Object.keys(s.show.genres).includes('Animation') || p.kind=='both'" :class="'btn btn-'+variant(s.episode)" :href="p.url+encodeURIComponent(s.show.title+' '+(p.with_code ? s.episode.code : '')+resolution)+p.post_url" target="_blank">{{ p.name }}</a>
                         </div>
-                        <div class="col-12 col-sm-6 d-flex justify-content-around my-2">
+                        <div class="d-none d-sm-flex col-sm-6 justify-content-around my-2">
                           <load-button :variant="s.episode.user.downloaded ? 'success' : 'outline-secondary'" :action="() => downloaded(s.episode)">Downloaded</load-button>
                           <load-button :variant="s.episode.user.seen ? 'success' : 'outline-secondary'" :action="() => watched(s.episode)">Watched</load-button>
+                          <load-button :variant="s.episode.user.seen ? 'info' : 'secondary'" :action="() => refresh_episode(s.show.id)" :disabled="!s.episode.user.seen">
+                            <i class="bi bi-chevron-double-right"></i>
+                          </load-button>
+                        </div>
+                        <div class="d-sm-none col-12 d-flex justify-content-around my-2">
+                          <load-button :variant="s.episode.user.downloaded ? 'success' : 'outline-secondary'" :action="() => downloaded(s.episode)">
+                            <i class="bi bi-download"></i>
+                          </load-button>
+                          <load-button :variant="s.episode.user.seen ? 'success' : 'outline-secondary'" :action="() => watched(s.episode)">
+                            <i class="bi bi-eye-fill"></i>
+                          </load-button>
                           <load-button :variant="s.episode.user.seen ? 'info' : 'secondary'" :action="() => refresh_episode(s.show.id)" :disabled="!s.episode.user.seen">
                             <i class="bi bi-chevron-double-right"></i>
                           </load-button>
@@ -147,12 +184,12 @@
                     <div class="card-title">
                       <button @click="route('serie', s.id)" :class="'btn btn-lg btn-'+theme.bg">{{ s.title }}</button>
                     </div>
-                    <div class="text-center d-flex align-items-center">
-                      <div class="col-3">Creation: {{ s.creation }}</div>
-                      <div class="col-7">Genres: {{ Object.keys(s.genres).join(', ') }}</div>
-                      <div class="col-2">
+                    <div class="row text-center d-flex align-items-center">
+                      <div class="col-12 col-sm-3">Creation: {{ s.creation }}</div>
+                      <div class="col-12 col-sm-7">Genres: {{ Object.keys(s.genres).join(', ') }}</div>
+                      <div class="col-12 col-sm-2">
                         <a :href="'https://www.imdb.com/title/'+s.imdb_id" target="_blank" v-if="s.imdb_id!=undefined">
-                          <img src="imdb.svg" width="50px" alt="imdb">
+                          <img src="imdb.svg" width="50" alt="imdb">
                         </a>
                       </div>
                     </div>
@@ -180,12 +217,23 @@
           <div class="d-flex">
             <div class="card flex-fill" :class="'text-bg-'+theme.bg">
               <div class="row g-0">
-                <div class="col-2 d-flex">
+                <div class="col-12 d-sm-none text-center">
+                  <div class="btn-group">
+                    <button type="button" :class="'btn btn-lg btn-'+theme.bg">{{ serie.show.title }}</button>
+                    <button type="button" :class="'dropdown-toggle dropdown-toggle-split btn btn-lg btn-'+theme.bg" data-bs-toggle="dropdown"></button>
+                    <ul class="dropdown-menu dropdown-menu-end" :class="'dropdown-menu-'+theme.bg">
+                      <li v-for="(a, j) in serie.show.aliases" :key="j">
+                        <a class="dropdown-item" @click="change_title(a)" role="button">{{ a }}</a>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="col-12 col-sm-2 d-flex">
                   <img class="card-img-top" :src="serie.show.images.poster?.url" alt="poster" class="rounded-0" style="object-fit: contain">
                 </div>
-                <div class="col-10 d-flex">
+                <div class="col-12 col-sm-10 d-flex">
                   <div class="card-body d-flex flex-column justify-content-between">
-                    <div class="card-title">
+                    <div class="card-title d-none d-sm-flex">
                       <div class="btn-group">
                         <button type="button" :class="'btn btn-lg btn-'+theme.bg">{{ serie.show.title }}</button>
                         <button type="button" :class="'dropdown-toggle dropdown-toggle-split btn btn-lg btn-'+theme.bg" data-bs-toggle="dropdown"></button>
@@ -196,12 +244,12 @@
                         </ul>
                       </div>
                     </div>
-                    <div class="row text-center d-flex align-items-center">
-                      <div class="col-3">Creation: {{ serie.show.creation }}</div>
-                      <div class="col-7">Genres: {{ Object.keys(serie.show.genres).join(', ') }}</div>
-                      <div class="col-2">
-                        <a :href="'https://www.imdb.com/title/'+serie.show.imdb_id" target="_blank" v-if="serie.show.imdb_id!=undefined">
-                          <img src="imdb.svg" width="100px" alt="imdb">
+                    <div class="text-center d-flex align-items-center justify-content-around">
+                      <div>Creation: {{ serie.show.creation }}</div>
+                      <div>Genres: {{ Object.keys(serie.show.genres).join(', ') }}</div>
+                      <div v-if="serie.show.imdb_id!=undefined">
+                        <a :href="'https://www.imdb.com/title/'+serie.show.imdb_id" target="_blank" >
+                          <img src="imdb.svg" width="80" alt="imdb">
                         </a>
                       </div>
                     </div>
@@ -220,26 +268,26 @@
             </div>
           </div>
           <div class="text-center my-3">
-            <div class="btn-group">
+            <div class="d-flex flex-wrap btn-group">
               <button v-for="(x, i) in Array(Number(serie.show.seasons))" @click="update_episodes(i+1)" :class="i+1==serie.season ? 'btn btn-primary' : 'btn btn-outline-primary'" :key="i">
                 Season {{i+1}}
               </button>
             </div>
           </div>
           <div class="mt-3" :class="'text-'+theme.tx">
-            <div class="row g-0 text-center" v-for="e in serie.episodes" :key="e.id">
-              <div class="col-2">{{ e.date.toLocaleDateString("fr-FR") }}</div>
-              <div class="col-2">{{ e.code_fmt }}</div>
-              <div class="col-5">{{ e.title }}</div>
-              <div class="col-1">
-                <copy-button :show="serie.show" :episode="e" :tx="theme.tx" placement="left"></copy-button>
+            <div class="row g-0 text-center d-flex align-items-center" v-for="e in serie.episodes" :key="e.id">
+              <div class="col-4 col-sm-2 order-0">{{ e.date.toLocaleDateString("fr-FR") }}</div>
+              <div class="col-3 col-sm-2 order-2 order-sm-1">{{ e.code_fmt }}</div>
+              <div class="col-8 col-sm-5 order-1 order-sm-2">{{ e.title }}</div>
+              <div class="col-3 col-sm-1 order-3 order-sm-3">
+                <copy-button :show="serie.show" :episode="e" :tx="theme.tx" placement="left" style></copy-button>
               </div>
-              <div class="col-1">
+              <div class="col-3 col-sm-1 order-4">
                 <load-button :variant="e.user.downloaded ? 'success' : 'outline-secondary'" :action="() => downloaded(e)">
                   <i class="bi bi-download"></i>
                 </load-button>
               </div>
-              <div class="col-1">
+              <div class="col-3 col-sm-1 order-5">
                 <load-button :variant="e.user.seen ? 'success' : 'outline-secondary'" :action="() => watched(e)">
                   <i class="bi bi-eye-fill"></i>
                 </load-button>
