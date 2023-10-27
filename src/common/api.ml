@@ -7,10 +7,10 @@ let base = BASE "https://api.betaseries.com"
 
 (* AUTH *)
 
-let api_key = "81a536f9a7a2"
+let api_key = ref ""
 let headers token = [
   "X-BetaSeries-Version", "3.0";
-  "X-BetaSeries-Key", api_key ] @
+  "X-BetaSeries-Key", !api_key ] @
   match token with None -> [] | Some token -> [ "Authorization", "Bearer " ^ token ]
 
 let login_param = Param.string "login"

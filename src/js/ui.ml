@@ -352,7 +352,7 @@ let%meth route app path id =
     | "search" -> search app
     | "discover" -> discover app
     | "my_series" -> my_series app
-    | "login" | "settings" -> Lwt.return_ok ()
+    | "login" | "settings" | "error" -> Lwt.return_ok ()
     | "serie" ->
       begin match Optdef.to_option id with
         | None ->
@@ -395,7 +395,7 @@ let set_file_path () =
   | Some Url.File _ -> file_path := Some s
   | _ -> ()
 
-[%%mounted (fun app ->
+let init app =
   match to_string app##.token with
   | "" -> Lwt.return_ok @@ route app (string "login") undefined
   | token ->
@@ -408,7 +408,23 @@ let set_file_path () =
       route app (string path) id)
     else (
       Idb.remove_config ~key:"token" app##.db;
-      route app (string "login") undefined))
+      route app (string "login") undefined)
+
+let export app =
+  export_all @@ object%js
+    method set_api_key_ k =
+      let key = to_string k in
+      Api.api_key := key;
+      Idb.update_config ~key:"api_key" app##.db key;
+      Api.run @@ init app
+  end
+
+[%%mounted fun app ->
+  export app;
+  Api.run @@
+  if !Api.api_key = "" then
+    Lwt.return_ok @@ route app (string "error") undefined
+  else init app
 ]
 
 let () =
@@ -423,6 +439,10 @@ let () =
   let>? resolution = Idb.get_config ~key:"resolution" db in
   let>? order = Idb.get_config ~key:"order" db in
   let resolution = Option.value ~default:"" resolution in
+  let>? api_key = Idb.get_config ~key:"api_key" db in
+  let () = match api_key with
+    | Some key -> Api.api_key := key
+    | _ -> () in
   let>? proxies = Idb.get_proxies db in
   let%data db : Ezjs_idb.Types.iDBDatabase t = db [@@noconv]
   and token : string = Option.value ~default:"" token
