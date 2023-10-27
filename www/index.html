@@ -386,7 +386,7 @@
           </div>
         </div>
 
-        <div class="container" v-else>
+        <div class="container" v-else-if="path=='error'">
           <div class="p-5 m-5 text-center" :class="'text-bg-'+theme.bg">
             No API key given
           </div>

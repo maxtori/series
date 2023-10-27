@@ -235,7 +235,7 @@ let%meth set_outdated _app (s: show_jsoo t) =
 
 and refresh_episode app (id: int) =
   locked := true;
-  Api.run @@
+  Promise.promise_lwt @@
   let order = order_of_jsoo app##.order in
   let>? new_shows = Api.get_unseen ~store:(Idb.manage_show app##.db) ~id ~order (to_string app##.token) in
   match new_shows with
