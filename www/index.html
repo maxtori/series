@@ -27,10 +27,10 @@
           <div class="collapse navbar-collapse" id="nav-collapse">
             <ul class="navbar-nav">
               <li class="nav-item text-center">
-                <a class="nav-link" :class="(path=='my_series') ? 'active' : ''" @click="route('my_series', undefined)" role="button">My Series</a>
+                <a class="nav-link" :class="(page=='my_series') ? 'active' : ''" @click="route('my_series', undefined)" role="button">My Series</a>
               </li>
               <li class="nav-item text-center">
-                <a class="nav-link" :class="(path=='discover') ? 'active' : ''" @click="route('discover', undefined)" role="button">Discover</a>
+                <a class="nav-link" :class="(page=='discover') ? 'active' : ''" @click="route('discover', undefined)" role="button">Discover</a>
               </li>
             </ul>
             <ul class="navbar-nav ms-auto">
@@ -40,13 +40,13 @@
                   <button class="btn btn-primary" @click="route('search', undefined)">Search</button>
                 </div>
               </li>
-              <li class="nav-item d-none d-sm-flex" v-if="path=='home'">
+              <li class="nav-item d-none d-sm-flex" v-if="page=='home'">
                 <a class="nav-link me-3" @click="change_order()" role="button">
                   <i v-if="order=='asc'" class="bi bi-sort-up"></i>
                   <i v-else class="bi bi-sort-down"></i>
                 </a>
               </li>
-              <li class="nav-item d-none d-sm-flex" v-if="path=='home'">
+              <li class="nav-item d-none d-sm-flex" v-if="page=='home'">
                 <a class="nav-link me-3" @click="update_shows()" role="button">
                   <i class="bi bi-arrow-clockwise"></i>
                 </a>
@@ -63,7 +63,7 @@
                 </div>
               </li>
               <li class="nav-item d-none d-sm-flex">
-                <a class="nav-link me-3" :class="(path=='settings') ? 'active' : ''" @click="route('settings', undefined)" role="button">
+                <a class="nav-link me-3" :class="(page=='settings') ? 'active' : ''" @click="route('settings', undefined)" role="button">
                   <i class="bi bi-gear-fill"></i>
                 </a>
               </li>
@@ -83,7 +83,7 @@
                 <a class="nav-link me-3" @click="switch_theme()" role="button">
                   <i :class="'bi bi-'+theme.icon"></i>
                 </a>
-                <a class="nav-link me-3" :class="(path=='settings') ? 'active' : ''" @click="route('settings', undefined)" role="button">
+                <a class="nav-link me-3" :class="(page=='settings') ? 'active' : ''" @click="route('settings', undefined)" role="button">
                   <i class="bi bi-gear-fill"></i>
                 </a>
                 <a class="nav-link me-3 float-right" @click="sign_out()" role="button">
@@ -97,7 +97,7 @@
 
       <div class="mb-3">
 
-        <div class="container" v-if="path=='login'">
+        <div class="container" v-if="page=='login'">
           <div class="mb-3">
             <label :class="'form-label text-'+theme.tx">Username</label>
             <input class="form-control" v-model.trim="login.username">
@@ -113,7 +113,7 @@
 
         <!-- HOME -->
 
-        <div class="row g-0" v-else-if="path=='home'">
+        <div class="row g-0" v-else-if="page=='home'">
           <div class="col-12 col-xl-6 d-flex" v-for="s in shows" :key="s.show.id">
             <div class="card flex-fill" :class="'text-bg-'+theme.bg">
               <div class="row g-0">
@@ -172,7 +172,7 @@
 
         <!-- SERIES -->
 
-        <div class="row g-0" v-else-if="path=='search' || path=='discover' || path =='my_series'">
+        <div class="row g-0" v-else-if="page=='search' || page=='discover' || page=='my_series'">
           <div class="col-12 col-xl-6 d-flex" v-for="s in series" :key="s.id">
             <div class="card flex-fill" :class="'text-bg-'+theme.bg">
               <div class="row g-0">
@@ -213,7 +213,7 @@
 
         <!-- SERIE -->
 
-        <div v-else-if="path=='serie' && serie!=undefined">
+        <div v-else-if="page=='serie' && serie!=undefined">
           <div class="d-flex">
             <div class="card flex-fill" :class="'text-bg-'+theme.bg">
               <div class="row g-0">
@@ -298,7 +298,7 @@
 
         <!-- SETTINGS -->
 
-        <div class="container" v-else-if="path=='settings'">
+        <div class="container" v-else-if="page=='settings'">
 
           <div class="card text-center" :class="'text-bg-'+theme.bg">
             <div class="card-body">
@@ -386,9 +386,9 @@
           </div>
         </div>
 
-        <div class="container" v-else-if="path=='error'">
+        <div class="container" v-else-if="page=='key'">
           <div class="p-5 m-5 text-center" :class="'text-bg-'+theme.bg">
-            No API key given
+            <input class="form-control" @keyup.enter="set_api_key">
           </div>
         </div>
 

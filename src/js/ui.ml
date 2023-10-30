@@ -113,7 +113,7 @@ end
 let locked = ref false
 
 let%data shows : episode_show list = []
-and path = "home"
+and page = "home"
 and query = ""
 and series : show list = []
 and serie : serie option = None
@@ -127,7 +127,7 @@ let clear ?(query=true) app =
 
 let get_state app state =
   let state = Unsafe.coerce state in
-  app##.path := state##.path;
+  app##.page := state##.page;
   app##.shows := state##.shows;
   app##.series := state##.series;
   app##.serie := state##.serie
@@ -155,29 +155,32 @@ let set_body_class = function
   | None -> Dom_html.document##.body##removeAttribute (string "class")
   | Some c -> Dom_html.document##.body##setAttribute (string "class") (string c)
 
-let file_path = ref None
-
 let set_state ?(scroll=true) app id =
-  let path = match !file_path with
-    | Some f -> f
-    | None ->
-      "/" ^ (to_string app##.path) ^
-      (match Optdef.to_option id with None -> "" | Some id -> "?id=" ^ string_of_int id) in
+  let path = match to_string Dom_html.window##.location##.protocol with
+    | "http:" | "https:" -> Option.some @@
+      Format.sprintf "%s?page=%s%s"
+        (to_string Dom_html.window##.location##.pathname)
+        (to_string app##.page)
+        (Option.fold ~none:"" ~some:(fun id -> "?id=" ^ string_of_int id) id)
+    | _ -> None in
   let state = object%js
-    val path = app##.path
+    val page = app##.page
     val shows = Unsafe.global##._Vue##toRaw app##.shows
     val series = Unsafe.global##._Vue##toRaw app##.series
     val serie = Unsafe.global##._Vue##toRaw app##.serie
   end in
-  Dom_html.window##.history##pushState (some @@ Unsafe.coerce state) (string "")  (some @@ string path);
+  Dom_html.window##.history##pushState (some @@ Unsafe.coerce state) (string "")  (opt string path);
   if scroll then Dom_html.window##scroll 0 0
 
-let get_path () =
-  match Url.url_of_string (to_string Dom_html.window##.location##.href) with
-  | None -> "", []
-  | Some url -> match url with
-    | Url.Http hu | Url.Https hu -> String.concat "/" hu.Url.hu_path, hu.Url.hu_arguments
-    | Url.File fu -> String.concat "/" fu.Url.fu_path, []
+let get_page () =
+  match to_string Dom_html.window##.location##.search with
+  | "" -> "home", None
+  | s ->
+    let s = String.sub s 1 (String.length s - 1) in
+    let args = List.filter_map (fun s -> match String.split_on_char '=' s with
+      | [ k; v ] -> Some (k, v) | _ -> None) @@ String.split_on_char '&' s in
+    Option.value ~default:"home" (List.assoc_opt "page" args),
+    Option.map int_of_string (List.assoc_opt "id" args)
 
 let%meth copy _app (show: show) (e: episode) (id : int) =
   let tp = Unsafe.global##.bootstrap##._Tooltip##getInstance (string ("#copy-" ^ string_of_int id)) in
@@ -237,19 +240,18 @@ and refresh_episode app (id: int) =
   locked := true;
   Promise.promise_lwt @@
   let order = order_of_jsoo app##.order in
-  let>? new_shows = Api.get_unseen ~store:(Idb.manage_show app##.db) ~id ~order (to_string app##.token) in
-  match new_shows with
-  | [] ->
-    let shows = of_listf episode_show_to_jsoo @@
-      List.filter (fun s -> s.es_show.s_id <> id) (to_listf episode_show_of_jsoo app##.shows) in
-    app##.shows := shows;
-    Lwt.map (fun () -> locked := false; Ok ()) (EzLwtSys.sleep 1.)
-  | {es_episode; _} :: _ ->
-    List.iteri
-      (fun i s -> if s.es_show.s_id = id then
-          ignore @@ app##.shows##splice_1 i 1 (episode_show_to_jsoo {s with es_episode}))
-      (to_listf episode_show_of_jsoo app##.shows);
-    Lwt.map (fun () -> locked := false; Ok ()) (EzLwtSys.sleep 1.)
+  let|>? new_shows = Api.get_unseen ~store:(Idb.manage_show app##.db) ~id ~order (to_string app##.token) in
+  let () = match new_shows with
+    | [] ->
+      let shows = of_listf episode_show_to_jsoo @@
+        List.filter (fun s -> s.es_show.s_id <> id) (to_listf episode_show_of_jsoo app##.shows) in
+      app##.shows := shows;
+    | {es_episode; _} :: _ ->
+      List.iteri
+        (fun i s -> if s.es_show.s_id = id then
+            ignore @@ app##.shows##splice_1 i 1 (episode_show_to_jsoo {s with es_episode}))
+        (to_listf episode_show_of_jsoo app##.shows) in
+  locked := false
 
 and add_show app (id: int) =
   Api.run @@
@@ -341,33 +343,32 @@ let home (app: all t) =
   let|>? shows = Api.get_unseen ~store:(Idb.manage_show app##.db) ~order (to_string app##.token) in
   app##.shows := of_listf episode_show_to_jsoo shows
 
-let%meth route app path id =
+let%meth route app (page: string) (id: int option) =
   if !Api.verbose then
-    log "route %S%s" (to_string path) @@
-    Option.fold ~none:"" ~some:(fun id -> "("^ string_of_int id ^")") @@
-    Optdef.to_option id;
-  app##.path := path;
+    log "route %S%s" page @@
+    Option.fold ~none:"" ~some:(fun id -> "("^ string_of_int id ^")") id;
+  app##.page := string page;
   Api.run @@
-  let|>? () = match to_string path with
+  let|>? () = match page with
     | "search" -> search app
     | "discover" -> discover app
     | "my_series" -> my_series app
-    | "login" | "settings" | "error" -> Lwt.return_ok ()
+    | "login" | "settings" | "key" -> Lwt.return_ok ()
     | "serie" ->
-      begin match Optdef.to_option id with
+      begin match id with
         | None ->
           let|>? () = home app in
-          app##.path := string "home"
+          app##.page := string "home"
         | Some id -> serie app id
       end
     | _ ->
       let|>? () = home app in
-      app##.path := string "home" in
+      app##.page := string "home" in
   set_state app id
 
 let%meth sign_out app =
   Idb.remove_config ~key:"token" app##.db;
-  route app (string "login") undefined
+  route app "login" None
 
 and sign_in app =
   let login = login_of_jsoo app##.login in
@@ -375,7 +376,7 @@ and sign_in app =
   let|>? auth = Api.request_token ~login:login.username ~password:login.password in
   app##.token := (string auth.a_token);
   Idb.update_config ~key:"token" app##.db auth.a_token;
-  route app (string "home") undefined
+  route app "home" None
 
 and add_proxy app =
   Idb.add_proxy app##.db (Idb.proxy_of_jsoo app##.proxy);
@@ -389,46 +390,34 @@ and remove_proxy app name i =
 and update_resolution app : unit =
   Idb.update_config ~key:"resolution" app##.db (to_string app##.resolution)
 
-let set_file_path () =
-  let s = to_string Dom_html.window##.location##.href in
-  match Url.url_of_string s with
-  | Some Url.File _ -> file_path := Some s
-  | _ -> ()
-
-let init app =
+let init ?(home=false) app =
   match to_string app##.token with
-  | "" -> Lwt.return_ok @@ route app (string "login") undefined
+  | "" ->
+    Lwt.return_ok @@ route app "login" None
   | token ->
     let> active = Api.active_token token in
     Lwt.return_ok @@
     if active then (
       app##.token := string token;
-      let path, args = get_path () in
-      let id = optdef int_of_string @@ List.assoc_opt "id" args in
-      route app (string path) id)
+      let page, id = if  home then "home", None else get_page () in
+      route app page id)
     else (
       Idb.remove_config ~key:"token" app##.db;
-      route app (string "login") undefined)
+      route app "login" None)
 
-let export app =
-  export_all @@ object%js
-    method set_api_key_ k =
-      let key = to_string k in
-      Api.api_key := key;
-      Idb.update_config ~key:"api_key" app##.db key;
-      Api.run @@ init app
-  end
+let%meth [@noconv] set_api_key app (ev: Dom_html.inputElement Dom.event t) =
+  let key = to_string (Option.get @@ Opt.to_option ev##.target)##.value in
+  Api.api_key := key;
+  Idb.update_config ~key:"api_key" app##.db key;
+  Api.run @@ init ~home:true app
 
 [%%mounted fun app ->
-  export app;
   Api.run @@
-  if !Api.api_key = "" then
-    Lwt.return_ok @@ route app (string "error") undefined
+  if !Api.api_key = "" then Lwt.return_ok @@ route app "key" None
   else init app
 ]
 
 let () =
-  set_file_path ();
   Idb.open_db @@ fun db ->
   Api.run @@
   let>? theme = Idb.get_config ~key:"theme" db in
@@ -440,9 +429,7 @@ let () =
   let>? order = Idb.get_config ~key:"order" db in
   let resolution = Option.value ~default:"" resolution in
   let>? api_key = Idb.get_config ~key:"api_key" db in
-  let () = match api_key with
-    | Some key -> Api.api_key := key
-    | _ -> () in
+  Option.iter (fun key -> Api.api_key := key) api_key;
   let>? proxies = Idb.get_proxies db in
   let%data db : Ezjs_idb.Types.iDBDatabase t = db [@@noconv]
   and token : string = Option.value ~default:"" token
