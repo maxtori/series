@@ -87,12 +87,14 @@ module LoadButton = struct
     (app##.action ())##then_ (wrap_callback (fun () -> app##.loading := _false))
 
   [%%mounted fun app ->
-    match Optdef.to_option [%el app] with
-    | None -> ()
-    | Some elt ->
-      let width = elt##.offsetWidth + 1 in
-      let height = elt##.offsetHeight + 1 in
-      app##.button_style_ := string (Format.sprintf "width: %dpx; height: %dpx" width height)
+    [%next app (fun app ->
+      match Optdef.to_option [%el app] with
+      | None -> ()
+      | Some elt ->
+        let width = elt##.offsetWidth + 1 in
+        let height = elt##.offsetHeight + 1 in
+        app##.button_style_ := string (Format.sprintf "width: %dpx; height: %dpx" width height))
+    ]
   ]
 
   [%%comp {conv}]
