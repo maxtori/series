@@ -2,22 +2,13 @@
   "name": "series",
   "short_name": "series",
   "description": "series",
-  "icons": [ {
-    "src": "series_192.png",
-    "sizes": "192x192",
-    "type": "image/png"
-  }, {
-    "src": "series_512.png",
-    "sizes": "512x512",
-    "type": "image/png"
-  }, {
-    "src": "series_512.png",
-    "sizes": "any",
-    "type": "image/png"
-  } ],
   "start_url": "index.html",
-  "display": "fullscreen",
+  "display": "standalone",
   "theme_color": "#000000",
   "background_color": "#000000",
-  "serviceworker": "sw.js"
+  "serviceworker": "sw.js",
+  "icons": [
+    { "src": "series_192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "series_512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "series_512.png", "sizes": "any", "type": "image/png" } ]
 }
