@@ -411,6 +411,11 @@ let%meth [@noconv] set_api_key app (ev: Dom_html.inputElement Dom.event t) =
   Idb.update_config ~key:"api_key" app##.db key;
   Api.run @@ init ~home:true app
 
+let register_worker () =
+  let service_worker = Ezjs_push.service_worker () in
+  Promise.jthen (service_worker##register (string "sw.js") undefined) @@ fun _ ->
+  ()
+
 [%%mounted fun app ->
   Api.run @@
   if !Api.api_key = "" then Lwt.return_ok @@ route app "key" None
@@ -418,6 +423,7 @@ let%meth [@noconv] set_api_key app (ev: Dom_html.inputElement Dom.event t) =
 ]
 
 let () =
+  register_worker ();
   Idb.open_db @@ fun db ->
   Api.run @@
   let>? theme = Idb.get_config ~key:"theme" db in
