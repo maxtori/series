@@ -414,9 +414,9 @@ let%meth [@noconv] set_api_key app (ev: Dom_html.inputElement Dom.event t) =
   Api.run @@ init ~home:true app
 
 let register_worker () =
-  let service_worker = Ezjs_push.service_worker () in
-  Promise.jthen (service_worker##register (string "sw.js") undefined) @@ fun _ ->
-  ()
+  if to_string Dom_html.window##.location##.protocol = "https:" then
+    let service_worker = Ezjs_push.service_worker () in
+    Promise.jthen (service_worker##register (string "sw.js") undefined) @@ fun _ -> ()
 
 [%%mounted fun app ->
   Api.run @@
