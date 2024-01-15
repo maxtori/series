@@ -151,7 +151,8 @@ let serie (app: all t) (id: int) =
       show, int_of_string_opt show.s_seasons
     | Some season -> Lwt.return_ok (se_show, Some season) in
   let|>? se_episodes = Api.get_show_episodes ~token:(to_string app##.token) ?season id in
-  app##.serie := def (serie_to_jsoo {se_show; se_episodes; se_season=season})
+  app##.serie := def (serie_to_jsoo {se_show; se_episodes; se_season=season});
+  "serie"
 
 let set_body_class = function
   | None -> Dom_html.document##.body##removeAttribute (string "class")
@@ -229,7 +230,8 @@ let%meth rec update_show app (s: show) (reset: bool) =
        if ss.es_show.s_id = s.s_id then
          ignore @@ app##.shows##splice_1 i 1 (episode_show_to_jsoo {ss with es_show}))
     (to_listf episode_show_of_jsoo app##.shows);
-  if reset then serie app s.s_id else Lwt.return_ok ()
+  if reset then let|>? _ = serie app s.s_id in ()
+  else Lwt.return_ok ()
 
 and update_shows app =
   let shows = to_listf episode_show_of_jsoo app##.shows in
@@ -292,7 +294,7 @@ and unarchive_show app (id: int) =
 and switch_theme app : unit =
   let theme, s = if app##.theme##.bg = string "light" then dark_theme, "dark" else light_theme, "light" in
   app##.theme := theme_to_jsoo theme;
-  set_body_class (Some ("bg-" ^ theme.t_bg));
+  set_body_class (Some ("text-bg-" ^ theme.t_bg));
   Idb.update_config ~key:"theme" app##.db s
 
 and change_order app : unit =
@@ -327,45 +329,46 @@ and change_title app (s: js_string t) : unit =
 let search (app: all t) =
   clear ~query:false app;
   let|>? searches = Api.search_shows ~token:(to_string app##.token) (to_string app##.query) in
-  app##.series := of_listf show_to_jsoo searches
+  app##.series := of_listf show_to_jsoo searches;
+  "search"
 
 let discover (app: all t) =
   clear app;
   let|>? series = Api.discover ~token:(to_string app##.token) () in
-  app##.series := of_listf show_to_jsoo series
+  app##.series := of_listf show_to_jsoo series;
+  "discover"
 
 let my_series (app: all t) =
   clear app;
   let|>? series = Api.my_shows (to_string app##.token) in
-  app##.series := of_listf show_to_jsoo series
+  app##.series := of_listf show_to_jsoo series;
+  "my_series"
 
 let home (app: all t) =
   clear app;
   let order = order_of_jsoo app##.order in
   let|>? shows = Api.get_unseen ~store:(Idb.manage_show app##.db) ~order (to_string app##.token) in
-  app##.shows := of_listf episode_show_to_jsoo shows
+  app##.shows := of_listf episode_show_to_jsoo shows;
+  "home"
 
 let%meth route app (page: string) (id: int option) =
   if !Api.verbose then
     log "route %S%s" page @@
     Option.fold ~none:"" ~some:(fun id -> "("^ string_of_int id ^")") id;
-  app##.page := string page;
+  app##.page := string "loading";
   Api.run @@
-  let|>? () = match page with
+  let|>? page = match page with
     | "search" -> search app
     | "discover" -> discover app
     | "my_series" -> my_series app
-    | "login" | "settings" | "key" -> Lwt.return_ok ()
+    | "login" | "settings" | "key" -> Lwt.return_ok page
     | "serie" ->
       begin match id with
-        | None ->
-          let|>? () = home app in
-          app##.page := string "home"
+        | None -> home app
         | Some id -> serie app id
       end
-    | _ ->
-      let|>? () = home app in
-      app##.page := string "home" in
+    | _ -> home app in
+  app##.page := string page;
   set_state app id
 
 let%meth sign_out app =
@@ -430,7 +433,7 @@ let () =
   Api.run @@
   let>? theme = Idb.get_config ~key:"theme" db in
   let theme = match theme with
-    | Some "dark" -> set_body_class @@ Some "bg-dark"; dark_theme
+    | Some "dark" -> set_body_class @@ Some "text-bg-dark"; dark_theme
     | _ -> light_theme in
   let>? token = Idb.get_config ~key:"token" db in
   let>? resolution = Idb.get_config ~key:"resolution" db in

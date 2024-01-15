@@ -99,7 +99,11 @@
 
       <div class="mb-3">
 
-        <div class="container" v-if="page=='login'">
+        <div class="m-5 text-center" v-if="page=='loading'">
+          <div class="spinner-border"></div>
+        </div>
+
+        <div class="container" v-else-if="page=='login'">
           <div class="mb-3">
             <label :class="'form-label text-'+theme.tx">Username</label>
             <input class="form-control" v-model.trim="login.username">
@@ -173,7 +177,7 @@
         </div>
 
         <!-- SERIES -->
-        <div v-else-if="(page=='search' || page=='discover' || page=='my_series') && series.length==0" :class="'m-5 text-center text-bg-'+theme.bg">
+        <div v-else-if="(page=='search' || page=='discover' || page=='my_series') && series.length==0" class="m-5 text-center">
           No result found
         </div>
         <div class="row g-0" v-else-if="page=='search' || page=='discover' || page=='my_series'">
