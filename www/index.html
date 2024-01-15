@@ -173,7 +173,9 @@
         </div>
 
         <!-- SERIES -->
-
+        <div v-else-if="(page=='search' || page=='discover' || page=='my_series') && series.length==0" :class="'m-5 text-center text-bg-'+theme.bg">
+          No result found
+        </div>
         <div class="row g-0" v-else-if="page=='search' || page=='discover' || page=='my_series'">
           <div class="col-12 col-xl-6 d-flex" v-for="s in series" :key="s.id">
             <div class="card flex-fill" :class="'text-bg-'+theme.bg">
