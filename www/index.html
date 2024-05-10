@@ -12,13 +12,13 @@
     <script src="https://unpkg.com/vue"></script>
     <script src="series.js" defer></script>
   </head>
-  <body>
+  <body data-bs-theme="dark">
     <div id="app-loading" style="height:100vh"></div>
     <div id="app" style="display: none">
 
       <!-- NAVBAR -->
 
-      <div class="navbar navbar-expand-sm sticky-top" :class="'bg-'+theme.bg+' '+theme.navbar">
+      <div class="navbar navbar-expand-sm sticky-top">
         <div class="container-fluid">
           <div class="navbar-brand" @click="route('home', undefined)" role="button">
             <img src="series_192.png" alt="Logo" width="40">
@@ -55,7 +55,8 @@
               </li>
               <li class="nav-item d-none d-sm-flex">
                 <a class="nav-link me-3" @click="switch_theme()" role="button">
-                  <i :class="'bi bi-'+theme.icon"></i>
+                  <i v-if="theme=='dark'" class="bi bi-sun-fill"></i>
+                  <i v-else class="bi bi-moon-fill"></i>
                 </a>
               </li>
               <li class="nav-item d-none d-sm-flex">
@@ -83,7 +84,8 @@
                   <i class="bi bi-arrow-clockwise"></i>
                 </a>
                 <a class="nav-link me-3" @click="switch_theme()" role="button">
-                  <i :class="'bi bi-'+theme.icon"></i>
+                  <i v-if="theme=='dark'" class="bi bi-sun-fill"></i>
+                  <i v-else class="bi bi-moon-fill"></i>
                 </a>
                 <a class="nav-link me-3" :class="(page=='settings') ? 'active' : ''" @click="route('settings', undefined)" role="button">
                   <i class="bi bi-gear-fill"></i>
@@ -105,11 +107,11 @@
 
         <div class="container" v-else-if="page=='login'">
           <div class="mb-3">
-            <label :class="'form-label text-'+theme.tx">Username</label>
+            <label class="form-label">Username</label>
             <input class="form-control" v-model.trim="login.username">
           </div>
           <div class="mb-3">
-            <label :class="'form-label text-'+theme.tx">Password</label>
+            <label class="form-label">Password</label>
             <input class="form-control" v-model.trim="login.password" type="password" @keyup.enter="sign_in()">
           </div>
           <div class="text-center">
@@ -121,7 +123,7 @@
 
         <div class="row g-0" v-else-if="page=='home'">
           <div class="col-12 col-xl-6 d-flex" v-for="s in shows" :key="s.show.id">
-            <div class="card flex-fill" :class="'text-bg-'+theme.bg">
+            <div class="card flex-fill">
               <div class="row g-0">
                 <div class="col-4 col-sm-2 d-flex">
                   <img class="card-img-top" :src="s.show.images.poster.url" alt="poster" class="rounded-0" @error="set_outdated(s.show)" v-if="!s.show.outdated && s.show.images.poster!=undefined" style="object-fit: contain" loading="lazy">
@@ -134,7 +136,7 @@
                 <div class="col-8 col-sm-10 d-flex">
                   <div class="card-body d-flex flex-column justify-content-between">
                     <div class="card-title">
-                      <a @click="route('serie', s.show.id)" :class="'btn btn-lg btn-'+theme.bg">{{ s.show.title }}</a>
+                      <a @click="route('serie', s.show.id)" class="btn btn-lg">{{ s.show.title }}</a>
                     </div>
                     <div v-if="s.episode!=undefined">
                       <div class="row pb-4 d-flex align-items-center text-center">
@@ -142,7 +144,7 @@
                         <div class="col-8 col-sm-4 text-center order-2 order-sm-1">{{ s.episode.title }}</div>
                         <div class="col-8 col-sm-3 order-1 order-sm-2">{{ s.episode.date.toLocaleDateString("fr-FR") }}</div>
                         <div class="col-4 col-sm-2 order-3">
-                          <copy-button :show="s.show" :episode="s.episode" :tx="theme.tx"></copy-button>
+                          <copy-button :show="s.show" :episode="s.episode"></copy-button>
                         </div>
                       </div>
                       <div class="row g-0">
@@ -182,7 +184,7 @@
         </div>
         <div class="row g-0" v-else-if="page=='search' || page=='discover' || page=='my_series'">
           <div class="col-12 col-xl-6 d-flex" v-for="s in series" :key="s.id">
-            <div class="card flex-fill" :class="'text-bg-'+theme.bg">
+            <div class="card flex-fill">
               <div class="row g-0">
                 <div class="col-4 col-sm-2 d-flex">
                   <img class="card-img-top" :src="s.images.poster.url" alt="poster" class="rounded-0" v-if="s.images.poster!=undefined" style="object-fit: contain" loading="lazy">
@@ -190,7 +192,7 @@
                 <div class="col-8 col-sm-10 d-flex">
                   <div class="card-body d-flex flex-column justify-content-between">
                     <div class="card-title">
-                      <button @click="route('serie', s.id)" :class="'btn btn-lg btn-'+theme.bg">{{ s.title }}</button>
+                      <button @click="route('serie', s.id)" class="btn btn-lg">{{ s.title }}</button>
                     </div>
                     <div class="row text-center d-flex align-items-center">
                       <div class="col-12 col-sm-3">Creation: {{ s.creation }}</div>
@@ -223,13 +225,13 @@
 
         <div v-else-if="page=='serie' && serie!=undefined">
           <div class="d-flex">
-            <div class="card flex-fill" :class="'text-bg-'+theme.bg">
+            <div class="card flex-fill">
               <div class="row g-0">
                 <div class="col-12 d-sm-none text-center">
                   <div class="btn-group">
-                    <button type="button" :class="'btn btn-lg btn-'+theme.bg">{{ serie.show.title }}</button>
-                    <button type="button" :class="'dropdown-toggle dropdown-toggle-split btn btn-lg btn-'+theme.bg" data-bs-toggle="dropdown"></button>
-                    <ul class="dropdown-menu dropdown-menu-end" :class="'dropdown-menu-'+theme.bg">
+                    <button type="button" class="btn btn-lg">{{ serie.show.title }}</button>
+                    <button type="button" class="dropdown-toggle dropdown-toggle-split btn btn-lg" data-bs-toggle="dropdown"></button>
+                    <ul class="dropdown-menu dropdown-menu-end">
                       <li v-for="(a, j) in serie.show.aliases" :key="j">
                         <a class="dropdown-item" @click="change_title(a)" role="button">{{ a }}</a>
                       </li>
@@ -243,9 +245,9 @@
                   <div class="card-body d-flex flex-column justify-content-between">
                     <div class="card-title d-none d-sm-flex">
                       <div class="btn-group">
-                        <button type="button" :class="'btn btn-lg btn-'+theme.bg">{{ serie.show.title }}</button>
-                        <button type="button" :class="'dropdown-toggle dropdown-toggle-split btn btn-lg btn-'+theme.bg" data-bs-toggle="dropdown"></button>
-                        <ul class="dropdown-menu dropdown-menu-end" :class="'dropdown-menu-'+theme.bg">
+                        <button type="button" class="btn btn-lg">{{ serie.show.title }}</button>
+                        <button type="button" class="dropdown-toggle dropdown-toggle-split btn btn-lg" data-bs-toggle="dropdown"></button>
+                        <ul class="dropdown-menu dropdown-menu-end">
                           <li v-for="(a, j) in serie.show.aliases" :key="j">
                             <a class="dropdown-item" @click="change_title(a)" role="button">{{ a }}</a>
                           </li>
@@ -282,13 +284,13 @@
               </button>
             </div>
           </div>
-          <div class="mt-3" :class="'text-'+theme.tx">
+          <div class="mt-3">
             <div class="row g-0 text-center d-flex align-items-center" v-for="e in serie.episodes" :key="e.id">
               <div class="col-4 col-sm-2 order-0">{{ e.date.toLocaleDateString("fr-FR") }}</div>
               <div class="col-3 col-sm-2 order-2 order-sm-1">{{ e.code_fmt }}</div>
               <div class="col-8 col-sm-5 order-1 order-sm-2">{{ e.title }}</div>
               <div class="col-3 col-sm-1 order-3 order-sm-3">
-                <copy-button :show="serie.show" :episode="e" :tx="theme.tx" placement="left" style></copy-button>
+                <copy-button :show="serie.show" :episode="e" placement="left" style></copy-button>
               </div>
               <div class="col-3 col-sm-1 order-4">
                 <load-button :variant="e.user.downloaded ? 'success' : 'outline-secondary'" :action="() => downloaded(e)">
@@ -308,10 +310,10 @@
 
         <div class="container" v-else-if="page=='settings'">
 
-          <div class="card text-center" :class="'text-bg-'+theme.bg">
+          <div class="card text-center">
             <div class="card-body">
               <h4 class="card-title">Proxies</h4>
-              <table class="table table-dark m-2" v-if="proxies.length!=0">
+              <table class="m-2 table" v-if="proxies.length!=0">
                 <thead>
                   <tr>
                     <th scope="col">Name</th>
@@ -335,7 +337,7 @@
                   </tr>
                 </tbody>
               </table>
-              <div :class="'card m-2 text-bg-'+theme.bg">
+              <div class="card m-2">
                 <div class="row">
                   <div class="col-3">
                     <div class="input-group mb-2">
@@ -360,7 +362,7 @@
                   <div class="offset-1 col-5">
                     <div class="input-group mb-2">
                       <span class="input-group-text">kind</span>
-                      <select v-model="proxy.kind">
+                      <select v-model="proxy.kind" class="form-select">
                         <option value="both" selected>both</option>
                         <option value="anime">anime</option>
                         <option value="series">series</option>
@@ -381,7 +383,7 @@
             </div>
           </div>
 
-          <div class="card text-center" :class="'text-bg-'+theme.bg">
+          <div class="card text-center">
             <div class="card-body">
               <h4 class="card-title">Resolution</h4>
               <select class="form-select" v-model="resolution" @change="update_resolution()">
@@ -395,7 +397,7 @@
         </div>
 
         <div class="container" v-else-if="page=='key'">
-          <div class="p-5 m-5 text-center" :class="'text-bg-'+theme.bg">
+          <div class="p-5 m-5 text-center">
             <input class="form-control" @keyup.enter="set_api_key">
           </div>
         </div>

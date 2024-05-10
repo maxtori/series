@@ -2,7 +2,6 @@ open Rp
 open Ezjs_min_lwt
 open Types
 open Jsoo
-open Theme
 
 type serie = {
   se_show : show;
@@ -154,9 +153,8 @@ let serie (app: all t) (id: int) =
   app##.serie := def (serie_to_jsoo {se_show; se_episodes; se_season=season});
   "serie"
 
-let set_body_class = function
-  | None -> Dom_html.document##.body##removeAttribute (string "class")
-  | Some c -> Dom_html.document##.body##setAttribute (string "class") (string c)
+let set_body_theme th =
+  Dom_html.document##.body##setAttribute (string "data-bs-theme") (string th)
 
 let set_state ?(scroll=true) app id =
   let path = match to_string Dom_html.window##.location##.protocol with
@@ -292,10 +290,11 @@ and unarchive_show app (id: int) =
     (to_listf show_of_jsoo app##.series)
 
 and switch_theme app : unit =
-  let theme, s = if app##.theme##.bg = string "light" then dark_theme, "dark" else light_theme, "light" in
-  app##.theme := theme_to_jsoo theme;
-  set_body_class (Some ("text-bg-" ^ theme.t_bg));
-  Idb.update_config ~key:"theme" app##.db s
+  let theme = to_string app##.theme in
+  let theme = if theme = "light" then "dark" else "light" in
+  app##.theme := string theme;
+  set_body_theme theme;
+  Idb.update_config ~key:"theme" app##.db theme
 
 and change_order app : unit =
   let order = match order_of_jsoo app##.order with `asc -> `desc | `desc -> `asc in
@@ -433,8 +432,8 @@ let () =
   Api.run @@
   let>? theme = Idb.get_config ~key:"theme" db in
   let theme = match theme with
-    | Some "dark" -> set_body_class @@ Some "text-bg-dark"; dark_theme
-    | _ -> light_theme in
+    | Some "light" -> set_body_theme "light"; "light"
+    | _ -> "dark" in
   let>? token = Idb.get_config ~key:"token" db in
   let>? resolution = Idb.get_config ~key:"resolution" db in
   let>? order = Idb.get_config ~key:"order" db in
@@ -444,7 +443,7 @@ let () =
   let>? proxies = Idb.get_proxies db in
   let%data db : Ezjs_idb.Types.iDBDatabase t = db [@@noconv]
   and token : string = Option.value ~default:"" token
-  and theme : theme = theme
+  and theme : string = theme
   and proxies : Idb.proxy list = proxies
   and resolution = resolution
   and order : order = match order with None | Some "asc" -> `asc | _ -> `desc in

@@ -70,8 +70,9 @@ let status_param = Param.string "status"
 let optl p f = function None -> [] | Some x -> [p, f x]
 
 let get_episodes ?(limit=1) ?(released=0) ?id token =
-  let params = [limit_param, I limit; released_param, I released] @
-               (optl show_id_param (fun x -> I x) id) in
+  let params =
+    [limit_param, I limit; released_param, I released] @
+    (optl show_id_param (fun x -> I x) id) in
   Lwt.map handle @@
   get0 ~msg:"episodes" base episodes ~headers:(headers (Some token)) ~params
 
