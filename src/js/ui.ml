@@ -4,14 +4,15 @@ open Types
 open Jsoo
 
 type serie = {
-  se_show : show;
-  se_episodes : episode list; [@mutable]
-  se_season : int option; [@mutable]
+  se_show: show;
+  se_episodes: episode list; [@mutable]
+  se_season: int option; [@mutable]
+  se_alias: string; [@mutable]
 } [@@deriving jsoo]
 
 type login = {
-  username : string; [@mutable]
-  password : string; [@mutable]
+  username: string; [@mutable]
+  password: string; [@mutable]
 } [@@deriving jsoo]
 
 module CopyButton = struct
@@ -150,7 +151,7 @@ let serie (app: all t) (id: int) =
       show, int_of_string_opt show.s_seasons
     | Some season -> Lwt.return_ok (se_show, Some season) in
   let|>? se_episodes = Api.get_show_episodes ~token:(to_string app##.token) ?season id in
-  app##.serie := def (serie_to_jsoo {se_show; se_episodes; se_season=season});
+  app##.serie := def (serie_to_jsoo {se_show; se_episodes; se_season=season; se_alias=""});
   "serie"
 
 let set_body_theme th =
@@ -317,10 +318,18 @@ and update_episodes app (season: int) =
       serie##.season := def season;
       serie##.episodes := of_listf episode_to_jsoo se_episodes
 
-and change_title app (s: js_string t) : unit =
+and set_title_alias app (ev: Dom_html.inputElement Dom.event t) =
+  match Optdef.to_option app##.serie, Opt.to_option ev##.target with
+  | None, _ | _, None -> ()
+  | Some serie, Some target -> serie##.alias := target##.value [@@noconv]
+
+and change_title app (s: js_string t optdef) : unit =
   match Optdef.to_option app##.serie with
   | None -> ()
   | Some serie ->
+    let s = match Optdef.to_option s with
+      | None -> let s = serie##.alias in serie##.alias := string ""; s
+      | Some s -> s in
     serie##.show##.title := s;
     let show = show_of_jsoo serie##.show in
     Idb.put_show app##.db show.s_id {show with s_title = to_string s} [@@noconv]

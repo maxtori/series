@@ -233,7 +233,13 @@
                     <button type="button" class="dropdown-toggle dropdown-toggle-split btn btn-lg" data-bs-toggle="dropdown"></button>
                     <ul class="dropdown-menu dropdown-menu-end">
                       <li v-for="(a, j) in serie.show.aliases" :key="j">
-                        <a class="dropdown-item" @click="change_title(a)" role="button">{{ a }}</a>
+                        <a class="dropdown-item" @click="change_title(a)" role="button" :value="a">{{ a }}</a>
+                      </li>
+                      <li>
+                        <div class="input-group">
+                          <input class="dropdown-item form-control" placeholder="custom" @input="set_title_alias"/>
+                          <button class="btn btn-sm"><i class="bi bi-arrow-right" @click="change_title(undefined)"></i></button>
+                        </div>
                       </li>
                     </ul>
                   </div>
@@ -249,7 +255,13 @@
                         <button type="button" class="dropdown-toggle dropdown-toggle-split btn btn-lg" data-bs-toggle="dropdown"></button>
                         <ul class="dropdown-menu dropdown-menu-end">
                           <li v-for="(a, j) in serie.show.aliases" :key="j">
-                            <a class="dropdown-item" @click="change_title(a)" role="button">{{ a }}</a>
+                            <a class="dropdown-item" @click="change_title(a)" role="button" :value="a">{{ a }}</a>
+                          </li>
+                          <li>
+                            <div class="input-group">
+                              <input class="dropdown-item form-control" placeholder="custom" @input="set_title_alias"/>
+                              <button class="btn btn-sm"><i class="bi bi-arrow-right" @click="change_title(undefined)"></i></button>
+                            </div>
                           </li>
                         </ul>
                       </div>
