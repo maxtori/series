@@ -20,23 +20,6 @@ let errors = [
             select=Option.some; deselect=(fun x -> x)} ]
 
 let verbose = ref false
-let get0 ?msg ?headers ?params base service =
-  let msg = if !verbose then msg else None in
-  get0 ?msg ?headers ?params base service
-let post0 ?msg ?headers ?params base service =
-  let msg = if !verbose then msg else None in
-  post0 ?msg ?headers ?params ~input:() base service
-
-[%%post {
-  name="auth"; path="/members/auth"; output=auth_enc;
-  params=[login_param; pwd_param]; errors } ]
-
-[%%get {
-  name="is_active"; path="/members/is_active";
-  output=Json_encoding.unit;
-  params=[login_param; pwd_param]; errors } ]
-
-let hash_pwd pwd = Hex.(show @@ of_string @@ Digest.string pwd)
 
 let handle = function
   | Ok x -> Ok x
@@ -44,13 +27,31 @@ let handle = function
   | Error (EzReq_lwt_S.UnknownError {code; msg}) ->
     Error (code, [{code=0; text=Option.value ~default:"" msg}])
 
+let get0 ?msg ?headers ?params base service =
+  let msg = if !verbose then msg else None in
+  Lwt.map handle @@ get0 ?msg ?headers ?params base service
+let post0 ?msg ?headers ?params base service =
+  let msg = if !verbose then msg else None in
+  Lwt.map handle @@ post0 ?msg ?headers ?params ~input:() base service
+
+let%post auth = {
+  path="/members/auth"; output=auth_enc;
+  params=[login_param; pwd_param]; errors
+}
+
+let%get is_active = {
+  path="/members/is_active"; output=Json_encoding.unit;
+  params=[login_param; pwd_param]; errors
+}
+
+let hash_pwd pwd = Hex.(show @@ of_string @@ Digest.string pwd)
+
 let request_token ~login ~password =
-  Lwt.map handle @@
   post0 ~msg:"auth" base auth ~headers:(headers None)
     ~params:[login_param, S login; pwd_param, S (hash_pwd password)]
 
 let active_token token =
-  Lwt.map (fun r -> match handle r with Error _ -> false | Ok () -> true) @@
+  Lwt.map (function Ok () -> true | Error _ -> false) @@
   get0 ~msg:"is_active" base is_active ~headers:(headers (Some token))
 
 (* EPISODES *)
@@ -63,9 +64,10 @@ let season_param = Param.int "season"
 let order_param = Param.string "order"
 let status_param = Param.string "status"
 
-[%%get {
-  name="episodes"; path="/episodes/list"; errors;
-  output=list_shows_enc; params=[limit_param; released_param; show_id_param] } ]
+let%get episodes = {
+  path="/episodes/list"; errors; output=A.list_shows_enc;
+  params=[limit_param; released_param; show_id_param]
+}
 
 let optl p f = function None -> [] | Some x -> [p, f x]
 
@@ -73,103 +75,104 @@ let get_episodes ?(limit=1) ?(released=0) ?id token =
   let params =
     [limit_param, I limit; released_param, I released] @
     (optl show_id_param (fun x -> I x) id) in
-  Lwt.map handle @@
   get0 ~msg:"episodes" base episodes ~headers:(headers (Some token)) ~params
 
-[%%post {
-  name="downloaded"; path="/episodes/downloaded"; errors;
-  output=display_episode_enc; params=[id_param] } ]
+let%get episode = {
+  path="/episodes/display"; errors; output=A.display_episode_enc;
+  params=[id_param]
+}
+
+let get_episode ?token id =
+  get0 ~msg:"episode" base episode ~headers:(headers token) ~params:[id_param, I id]
+
+let%post downloaded = {
+  path="/episodes/downloaded"; errors; output=A.display_episode_enc; params=[id_param]
+}
 
 [%%delete {
   name="undownloaded"; path="/episodes/downloaded"; errors;
-  output=display_episode_enc; params=[id_param] } ]
+  output=A.display_episode_enc; params=[id_param] } ]
 
 let downloaded ~token id b =
   let params = [id_param, I id] in
   let s = if b then downloaded else undownloaded in
-  Lwt.map handle @@
   post0 ~msg:"downloaded" base s ~headers:(headers (Some token)) ~params
 
-[%%post {
-  name="watched"; path="/episodes/watched"; errors;
-  output=display_episode_enc; params=[id_param] } ]
+let%post watched = { path="/episodes/watched"; errors; output=A.display_episode_enc; params=[id_param] }
 
-[%%delete {
-  name="unwatched"; path="/episodes/watched"; errors;
-  output=display_episode_enc; params=[id_param] } ]
+let%delete unwatched = { path="/episodes/watched"; errors; output=A.display_episode_enc; params=[id_param] }
 
 let watched ~token id b =
   let params = [id_param, I id] in
   let s = if b then watched else unwatched in
-  Lwt.map handle @@
   post0 ~msg:"watched" base s ~headers:(headers (Some token)) ~params
 
 (* SHOW *)
 
-[%%get { name="show"; path="/shows/display"; errors; output=display_show_enc; params=[id_param] } ]
+let%get show = { path="/shows/display"; errors; output=A.display_show_enc; params=[id_param] }
 
 let get_show ?token id =
-  Lwt.map handle @@
   get0 ~msg:"show" base show ~headers:(headers token) ~params:[id_param, I id]
 
 let title_param = Param.string "title"
 
-[%%get { name="search"; path="/shows/search"; errors; output=search_shows_enc; params=[title_param] } ]
+let%get search = { path="/shows/search"; errors; output=A.search_shows_enc; params=[title_param] }
 
 let search_shows ?token title =
-  Lwt.map handle @@
   get0 ~msg:"search" base search ~headers:(headers token) ~params:[title_param, S title]
 
-[%%post { name="add_show"; path="/shows/show"; errors; output=display_show_enc; params=[id_param] } ]
-[%%delete { name="remove_show"; path="/shows/show"; errors; output=display_show_enc; params=[id_param] } ]
+let%post add_show = { path="/shows/show"; errors; output=A.display_show_enc; params=[id_param] }
+let%delete remove_show = { path="/shows/show"; errors; output=A.display_show_enc; params=[id_param] }
 
 let add_show ~token id =
-  Lwt.map handle @@
   post0 ~msg:"add" base add_show ~headers:(headers (Some token))
     ~params:[id_param, I id]
 
 let remove_show ~token id =
-  Lwt.map handle @@
   post0 ~msg:"remove" base remove_show ~headers:(headers (Some token))
     ~params:[id_param, I id]
 
-[%%get { name="discover"; path="/shows/discover"; errors; output=search_shows_enc } ]
+let%get discover = { path="/shows/discover"; errors; output=A.search_shows_enc }
 
 let discover ?token () =
-  Lwt.map handle @@
   get0 ~msg:"discover" base discover ~headers:(headers token)
 
-[%%get {
-  name="show_episodes"; path="/shows/episodes"; errors; output=episodes_enc;
-  params=[id_param; season_param] } ]
+let%get show_episodes = {
+  path="/shows/episodes"; errors; output=A.episodes_enc;
+  params=[id_param; season_param]
+}
 
 let get_show_episodes ?token ?season id =
   let params = optl season_param (fun x -> I x) season in
-  Lwt.map handle @@
   get0 ~msg:"show_episodes" base show_episodes ~headers:(headers token)
     ~params:((id_param, I id) :: params)
 
-[%%get {
-  name="my_shows"; path="/shows/member"; errors; output=search_shows_enc;
-  params=[order_param; status_param] } ]
+let%get my_shows = {
+  path="/shows/member"; errors; output=A.search_shows_enc;
+  params=[order_param; status_param]
+}
 
 let my_shows ?(order="last_seen") ?(status="active") token =
   let params = [order_param, S order; status_param, S status] in
-  Lwt.map handle @@
   get0 ~msg:"my_shows" base my_shows ~headers:(headers (Some token)) ~params
 
-[%%post { name="archive"; path="/shows/archive"; errors; output=display_show_enc; params=[id_param] } ]
-[%%delete { name="unarchive"; path="/shows/archive"; errors; output=display_show_enc; params=[id_param] } ]
+let%post archive = { path="/shows/archive"; errors; output=A.display_show_enc; params=[id_param] }
+let%delete unarchive = { path="/shows/archive"; errors; output=A.display_show_enc; params=[id_param] }
 
 let archive_show ~token id =
-  Lwt.map handle @@
   post0 ~msg:"archive" base archive ~headers:(headers (Some token))
     ~params:[id_param, I id]
 
 let unarchive_show ~token id =
-  Lwt.map handle @@
   post0 ~msg:"unarchive" base unarchive ~headers:(headers (Some token))
     ~params:[id_param, I id]
+
+(* PLANNING *)
+
+let%get planning = { path="/planning/timeline"; errors; output=planning_enc }
+
+let get_planning token =
+  get0 ~msg:"planning" base planning ~headers:(headers (Some token))
 
 (* MAIN *)
 
@@ -216,48 +219,60 @@ let compare_episode_show ?(order=`asc) s1 s2 =
         else if t2 > 0 then -1
         else -t
 
-let unseen_episode ?store ?(fill=true) ?(period=Cal.Period.day 8) ~token ~show ~id acc episodes =
-  let now = Cal.today () in
-  let get_show ffill =
-    if not fill then rok show
-    else match store with
-      | None ->
-        let|>? s = get_show ~token id in
-        ffill s
-      | Some (get, add, put, _delete) ->
-        let> s = get id in
-        match s with
-        | Error _ ->
-          let|>? s = get_show ~token id in
-          let s = ffill s in
-          put id s;
-          s
-        | Ok None ->
-          let|>? s = get_show ~token id in
-          let s = ffill s in
-          add id s;
-          s
-        | Ok (Some s) -> rok s in
-  match episodes with
-  | [] -> rok acc
-  | e :: _ ->
-    let e = {e with e_title = format_filename e.e_title} in
-    match e.e_date with
-    | None -> rok acc
-    | Some date ->
-      if Cal.(Period.compare (sub date now) period) < 0 then
-        let es_episode = Some {e with e_status = episode_status now date} in
-        let ffill s = {show with s_images = s.s_images; s_genres = s.s_genres} in
-        let|>? es_show = get_show ffill in
-        {es_show; es_episode} :: acc
-      else
-        rok acc
+let update_show ?show s = match show with
+  | None -> s
+  | Some show -> {show with s_images = s.s_images; s_genres = s.s_genres}
+
+let get_and_store_show ?store ?(fill=true) ?show ~token id =
+  match fill, show, store with
+  | false, Some show, _ -> rok show
+  | _, _, None ->
+    let|>? s = get_show ~token id in
+    update_show ?show s
+  | _, _, Some (get, add, put, _delete) ->
+    let> s = get id in
+    match s with
+    | Error _ ->
+      let|>? s = get_show ~token id in
+      let s = update_show ?show s in
+      put id s;
+      s
+    | Ok None ->
+      let|>? s = get_show ~token id in
+      let s = update_show ?show s in
+      add id s;
+      s
+    | Ok (Some s) -> rok s
+
+let unseen_episode ?store ?fill ?(period=Cal.Period.day 8) ~token ?(show: show option) ~id ~now e =
+  let e = { e with e_title = format_filename e.e_title } in
+  match e.e_date with
+  | None -> rok None
+  | Some date ->
+    if Cal.(Period.compare (sub date now) period) < 0 then
+      let es_episode = Some {e with e_status = episode_status now date} in
+      let|>? es_show = get_and_store_show ?store ?fill ?show ~token id in
+      Some {es_show; es_episode}
+    else rok None
 
 let get_unseen ?(limit=1) ?(released=0) ?period ?store ?id ?fill ?order token =
+  let now = Cal.today () in
   let>? shows = get_episodes ~limit ~released ?id token in
-  let|>? l = fold (fun acc s ->
-    unseen_episode ?store ?fill ?period ~token ~show:s.su_show ~id:s.su_show.s_id acc s.su_unseen
-  ) [] shows in
-  List.sort (compare_episode_show ?order) l
+  let>? planning = get_planning token in
+  let>? planning = fold (fun acc d ->
+    let events = List.filter_map (function Episode_release er -> Some er | _ -> None) d.events in
+    fold (fun acc ev ->
+      let>? e = get_episode ~token ev.er_id in
+      if e.e_user.eu_seen then rok acc else
+      let|>? e = unseen_episode ?store ?fill ?period ~token ~id:ev.er_show_id ~now e in
+      match e with None -> acc | Some e -> e :: acc) acc events
+  ) [] planning in
+  let|>? episodes = fold (fun acc s ->
+    match s.su_unseen with
+    | [] -> rok acc
+    | e :: _ ->
+      let|>? e = unseen_episode ?store ?fill ?period ~token ~show:s.su_show ~id:s.su_show.s_id ~now e in
+      match e with None -> acc | Some e -> e :: acc) [] shows in
+  List.sort (compare_episode_show ?order) (episodes @ planning)
 
 let run p = EzLwtSys.run (fun () -> print_error p)

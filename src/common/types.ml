@@ -96,10 +96,42 @@ type episode_show = {
   es_episode : episode option;
 } [@@deriving encoding, jsoo]
 
-type list_shows = (show_unseen list [@obj1 "shows"]) [@@deriving encoding {ignore}]
-type display_show = (show [@obj1 "show"]) [@@deriving encoding {ignore}]
-type display_episode = (episode [@obj1 "episode"]) [@@deriving encoding {ignore}]
-type search_shows = (show list [@obj1 "shows"]) [@@deriving encoding {ignore}]
-type episodes = (episode list [@obj1 "episodes"]) [@@deriving encoding {ignore}]
+module A = struct
+  type list_shows = (show_unseen list [@obj1 "shows"]) [@@deriving encoding {ignore}]
+  type display_show = (show [@obj1 "show"]) [@@deriving encoding {ignore}]
+  type display_episode = (episode [@obj1 "episode"]) [@@deriving encoding {ignore}]
+  type search_shows = (show list [@obj1 "shows"]) [@@deriving encoding {ignore}]
+  type episodes = (episode list [@obj1 "episodes"]) [@@deriving encoding {ignore}]
+end
 
 type order = [ `desc | `asc ] [@@deriving jsoo {enum}]
+
+let unknown_kind_enc =
+  conv (fun s -> s, ()) fst @@
+  merge_objs (obj1 (req "type" string)) unit
+
+let string_int_enc = conv string_of_int int_of_string string
+
+type episode_release_payload = {
+  er_id: int;
+  er_show_id: int;
+  er_show_title: string;
+  er_show_slug: string;
+  er_title: string;
+  er_code: string;
+  er_season: int; [@encoding string_int_enc]
+  er_episode: int; [@encoding string_int_enc]
+} [@@deriving encoding {ignore}]
+
+type timeline_event =
+  | Episode_release of (episode_release_payload [@wrap "payload"]) [@kind] [@kind_label "type"]
+  | Unknown of (string [@encoding unknown_kind_enc])
+[@@deriving encoding]
+
+type timeline_day = {
+  date: tsp;
+  density: string;
+  events: timeline_event list; [@dft []]
+} [@@deriving encoding]
+
+type planning = (timeline_day list [@obj1 "days"]) [@@deriving encoding {ignore}]
