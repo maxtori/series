@@ -258,21 +258,22 @@ let unseen_episode ?store ?fill ?(period=Cal.Period.day 8) ~token ?(show: show o
 let get_unseen ?(limit=1) ?(released=0) ?period ?store ?id ?fill ?order token =
   let now = Cal.today () in
   let>? shows = get_episodes ~limit ~released ?id token in
-  let>? planning = get_planning token in
-  let>? planning = fold (fun acc d ->
-    let events = List.filter_map (function Episode_release er -> Some er | _ -> None) d.events in
-    fold (fun acc ev ->
-      let>? e = get_episode ~token ev.er_id in
-      if e.e_user.eu_seen then rok acc else
-      let|>? e = unseen_episode ?store ?fill ?period ~token ~id:ev.er_show_id ~now e in
-      match e with None -> acc | Some e -> e :: acc) acc events
-  ) [] planning in
-  let|>? episodes = fold (fun acc s ->
+  let>? episodes = fold (fun acc s ->
     match s.su_unseen with
     | [] -> rok acc
     | e :: _ ->
       let|>? e = unseen_episode ?store ?fill ?period ~token ~show:s.su_show ~id:s.su_show.s_id ~now e in
       match e with None -> acc | Some e -> e :: acc) [] shows in
-  List.sort (compare_episode_show ?order) (episodes @ planning)
+  let>? planning = get_planning token in
+  let|>? planning = fold (fun acc d ->
+    let events = List.filter_map (function Episode_release er -> Some er | _ -> None) d.events in
+    fold (fun acc ev ->
+      let>? e = get_episode ~token ev.er_id in
+      if e.e_user.eu_seen then rok acc else
+      if List.exists (fun x -> x.es_show.s_id = ev.er_show_id) acc then rok acc else
+      let|>? e = unseen_episode ?store ?fill ?period ~token ~id:ev.er_show_id ~now e in
+      match e with None -> acc | Some e -> e :: acc) acc events
+  ) episodes planning in
+  List.sort (compare_episode_show ?order) planning
 
 let run p = EzLwtSys.run (fun () -> print_error p)
