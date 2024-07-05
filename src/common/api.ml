@@ -264,7 +264,7 @@ let get_unseen ?(limit=1) ?(released=0) ?period ?store ?id ?fill ?order token =
     | e :: _ ->
       let|>? e = unseen_episode ?store ?fill ?period ~token ~show:s.su_show ~id:s.su_show.s_id ~now e in
       match e with None -> acc | Some e -> e :: acc) [] shows in
-  let>? planning = get_planning token in
+  let>? planning = match id with None -> get_planning token | _ -> rok [] in
   let|>? planning = fold (fun acc d ->
     let events = List.filter_map (function Episode_release er -> Some er | _ -> None) d.events in
     fold (fun acc ev ->
