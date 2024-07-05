@@ -276,13 +276,16 @@
                       </div>
                     </div>
                     <div class="my-2 overflow-auto text-center" style="max-height: 75px">{{ serie.show.description }}</div>
-                    <div class="text-center">
-                      <button class="btn btn-info" @click="update_show(serie.show, true)">Refresh</button>
-                      <span v-if="serie.show.in_account">
-                        <button class="btn btn-danger" @click="remove_show(serie.show.id)">Remove</button>
-                        <button class="btn btn-warning" @click="archive_show(serie.show.id)">Archive</button>
-                      </span>
-                      <button class="btn btn-primary" @click="add_show(serie.show.id)" v-else>Add</button>
+                    <div class="d-flex justify-content-around">
+                      <div class="text-center">
+                        <button class="btn btn-info" @click="update_show(serie.show, true)">Refresh</button>
+                        <span v-if="serie.show.in_account">
+                          <button class="btn btn-danger" @click="remove_show(serie.show.id)">Remove</button>
+                          <button class="btn btn-warning" @click="archive_show(serie.show.id)">Archive</button>
+                        </span>
+                        <button class="btn btn-primary" @click="add_show(serie.show.id)" v-else>Add</button>
+                      </div>
+                      <input type="text" class="form-control" v-model="serie.team" placeholder="Team" style="max-width:200px">
                     </div>
                   </div>
                 </div>
@@ -302,7 +305,7 @@
               <div class="col-3 col-sm-2 order-2 order-sm-1">{{ e.code_fmt }}</div>
               <div class="col-8 col-sm-5 order-1 order-sm-2">{{ e.title }}</div>
               <div class="col-3 col-sm-1 order-3 order-sm-3">
-                <copy-button :show="serie.show" :episode="e" placement="left" style></copy-button>
+                <copy-button :show="serie.show" :episode="e" :team="serie.team" placement="left"></copy-button>
               </div>
               <div class="col-3 col-sm-1 order-4">
                 <load-button :variant="e.user.downloaded ? 'success' : 'outline-secondary'" :action="() => downloaded(e)">

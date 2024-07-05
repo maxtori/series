@@ -8,6 +8,7 @@ type serie = {
   se_episodes: episode list; [@mutable]
   se_season: int option; [@mutable]
   se_alias: string; [@mutable]
+  se_team: string; [@mutable]
 } [@@deriving jsoo]
 
 type login = {
@@ -20,6 +21,7 @@ module CopyButton = struct
   let%prop tx = "light"
   and show : show = {req}
   and episode : episode = {req}
+  and team = ""
   and placement = "top"
 
   let%data copied = false
@@ -32,9 +34,11 @@ module CopyButton = struct
 
   let%meth copy app =
     let tp = Unsafe.global##.bootstrap##._Tooltip##getInstance [%el app] in
-    let s = string @@ Format.sprintf "%s - %s - %s"
+    let team = to_string app##.team in
+    let s = string @@ Format.sprintf "%s - %s - %s%s"
         (Api.format_show_title (to_string app##.show##.title)) (to_string app##.episode##.code_fmt_)
-        (Api.format_filename @@ to_string app##.episode##.title) in
+        (Api.format_filename @@ to_string app##.episode##.title)
+        (if team = "" then "" else "." ^ team) in
     ignore @@ Unsafe.global##.self##.navigator##.clipboard##writeText s;
     apply app tp true;
     ignore @@ Dom_html.window##setTimeout
@@ -151,7 +155,7 @@ let serie (app: all t) (id: int) =
       show, int_of_string_opt show.s_seasons
     | Some season -> Lwt.return_ok (se_show, Some season) in
   let|>? se_episodes = Api.get_show_episodes ~token:(to_string app##.token) ?season id in
-  app##.serie := def (serie_to_jsoo {se_show; se_episodes; se_season=season; se_alias=""});
+  app##.serie := def (serie_to_jsoo {se_show; se_episodes; se_season=season; se_alias=""; se_team=""});
   "serie"
 
 let set_body_theme th =
@@ -184,17 +188,7 @@ let get_page () =
     Option.value ~default:"home" (List.assoc_opt "page" args),
     Option.map int_of_string (List.assoc_opt "id" args)
 
-let%meth copy _app (show: show) (e: episode) (id : int) =
-  let tp = Unsafe.global##.bootstrap##._Tooltip##getInstance (string ("#copy-" ^ string_of_int id)) in
-  let s = string @@ Format.sprintf "%s - %s - %s"
-      (Api.format_show_title show.s_title) e.e_code_fmt (Api.format_filename e.e_title) in
-  ignore @@ Unsafe.global##.self##.navigator##.clipboard##writeText s;
-  match Opt.to_option tp with
-  | None -> ()
-  | Some tp ->
-    ignore @@ tp##setContent (Unsafe.obj [| ".tooltip-inner", Unsafe.inject (string "copied!") |])
-
-and downloaded app (e: episode_jsoo t) =
+let%meth downloaded app (e: episode_jsoo t) =
   Promise.promise_lwt @@
   if not !locked then
     let b = not (to_bool e##.user##.downloaded) in
