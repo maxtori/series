@@ -133,10 +133,10 @@ let clear ?(query=true) app =
 
 let get_state app state =
   let state = Unsafe.coerce state in
-  app##.page := state##.page;
   app##.shows := state##.shows;
   app##.series := state##.series;
-  app##.serie := state##.serie
+  app##.serie := state##.serie;
+  app##.page := state##.page
 
 let serie (app: all t) (id: int) =
   clear app;
@@ -161,7 +161,7 @@ let serie (app: all t) (id: int) =
 let set_body_theme th =
   Dom_html.document##.body##setAttribute (string "data-bs-theme") (string th)
 
-let set_state ?(scroll=true) app id =
+let set_state ?(scroll=true) ?(replace=false) app id =
   let path = match to_string Dom_html.window##.location##.protocol with
     | "http:" | "https:" -> Option.some @@
       Format.sprintf "%s?page=%s%s"
@@ -175,7 +175,10 @@ let set_state ?(scroll=true) app id =
     val series = Unsafe.global##._Vue##toRaw app##.series
     val serie = Unsafe.global##._Vue##toRaw app##.serie
   end in
-  Dom_html.window##.history##pushState (some @@ Unsafe.coerce state) (string "")  (opt string path);
+  if replace then
+    Dom_html.window##.history##replaceState (some @@ Unsafe.coerce state) (string "")  (opt string path)
+  else
+    Dom_html.window##.history##pushState (some @@ Unsafe.coerce state) (string "")  (opt string path);
   if scroll then Dom_html.window##scroll 0 0
 
 let get_page () =
@@ -354,6 +357,7 @@ let home (app: all t) =
   "home"
 
 let%meth route app (page: string) (id: int option) =
+  set_state ~replace:true app id;
   if !Api.verbose then
     log "route %S%s" page @@
     Option.fold ~none:"" ~some:(fun id -> "("^ string_of_int id ^")") id;
@@ -406,7 +410,7 @@ let init ?(home=false) app =
     Lwt.return_ok @@
     if active then (
       app##.token := string token;
-      let page, id = if  home then "home", None else get_page () in
+      let page, id = if home then "home", None else get_page () in
       route app page id)
     else (
       Idb.remove_config ~key:"token" app##.db;
