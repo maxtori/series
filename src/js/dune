@@ -7,12 +7,14 @@
 
 (library
  (name jsoo)
+ (public_name series.jsoo)
  (modules jsoo)
  (libraries types ez_api.encoding_js)
  (modes byte))
 
 (library
  (name idb)
+ (public_name series.idb)
  (modules idb)
  (preprocess (pps ppx_deriving_jsoo))
  (libraries jsoo ezjs_idb ezjs_min.lwt)

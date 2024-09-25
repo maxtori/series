@@ -5,11 +5,13 @@
 
 (library
  (name rp)
+ (public_name series.rp)
  (modules rp)
  (libraries lwt))
 
 (library
  (name types)
+ (public_name series.types)
  (modules types)
  (preprocessor_deps (env_var "PPX_ENCODING_MODULE") (env_var "PPX_JSOO_FAKE"))
  (preprocess (pps ppx_deriving_encoding ppx_deriving_jsoo ppx_deriving_empty))
@@ -17,6 +19,7 @@
 
 (library
  (name api)
+ (public_name series.api)
  (modules api)
  (preprocess (pps ez_api.ppx_client))
  (libraries types ez_api.req_lwt rp str))

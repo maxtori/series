@@ -1,0 +1,9 @@
+pin-depends: [
+  [ "ez_api.dev" "git+https://github.com/ocamlpro/ez_api.git" ]
+  [ "ppx_deriving_encoding.dev" "git+https://gitlab.com/o-labs/ppx_deriving_encoding.git" ]
+  [ "ppx_deriving_jsoo.dev" "git+https://gitlab.com/o-labs/ppx_deriving_jsoo.git" ]
+  [ "ppx_deriving_empty.~dev" "git+https://gitlab.com/o-labs/ppx_deriving_empty.git" ]
+  [ "ezjs_idb.dev" "git+https://github.com/ocamlpro/ezjs_idb.git" ]
+  [ "ezjs_fetch.dev" "git+https://github.com/ocamlpro/ezjs_fetch.git" ]
+  [ "vue-ppx.dev" "git+https://gitlab.com/functori/dev/vue-ppx.git" ]
+]
