@@ -154,7 +154,7 @@
                         <div class="d-none d-sm-flex col-sm-6 justify-content-around my-2">
                           <load-button :variant="s.episode.user.downloaded ? 'success' : 'outline-secondary'" :action="() => downloaded(s.episode)">Downloaded</load-button>
                           <load-button :variant="s.episode.user.seen ? 'success' : 'outline-secondary'" :action="() => watched(s.episode)">Watched</load-button>
-                          <load-button :variant="s.episode.user.seen ? 'info' : 'secondary'" :action="() => refresh_episode(s.show.id)" :disabled="!s.episode.user.seen">
+                          <load-button :variant="s.episode.user.seen ? 'info' : 'secondary'" :action="() => refresh_episode(s.show.id, s.episode.id)" :disabled="!s.episode.user.seen">
                             <i class="bi bi-chevron-double-right"></i>
                           </load-button>
                         </div>
@@ -165,7 +165,7 @@
                           <load-button :variant="s.episode.user.seen ? 'success' : 'outline-secondary'" :action="() => watched(s.episode)">
                             <i class="bi bi-eye-fill"></i>
                           </load-button>
-                          <load-button :variant="s.episode.user.seen ? 'info' : 'secondary'" :action="() => refresh_episode(s.show.id)" :disabled="!s.episode.user.seen">
+                          <load-button :variant="s.episode.user.seen ? 'info' : 'secondary'" :action="() => refresh_episode(s.show.id, s.episode.id)" :disabled="!s.episode.user.seen">
                             <i class="bi bi-chevron-double-right"></i>
                           </load-button>
                         </div>

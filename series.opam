@@ -3,6 +3,7 @@ opam-version: "2.0"
 synopsis: "series"
 maintainer: ["maxtori"]
 authors: ["maxtori"]
+license: "MIT"
 homepage: "https://github.com/maxtori/series"
 doc: "https://github.com/maxtori/series"
 bug-reports: "https://github.com/maxtori/series/issues"
@@ -13,10 +14,10 @@ depends: [
   "ezjs_idb"
   "ezjs_fetch"
   "ezjs_push"
-  "ppx_deriving_encoding"
-  "ppx_deriving_jsoo"
-  "ppx_deriving_empty"
-  "vue-ppx"
+  "ppx_deriving_encoding" {build}
+  "ppx_deriving_jsoo" {build}
+  "ppx_deriving_empty" {build}
+  "vue-ppx" {build}
   "odoc" {with-doc}
 ]
 build: [

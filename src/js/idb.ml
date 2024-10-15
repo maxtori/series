@@ -32,6 +32,13 @@ module ShowStore = Store(NoTr(struct type t = int end))(struct
     let of_js = show_of_jsoo
   end)
 
+module EpisodeStore = Store(NoTr(struct type t = int end))(struct
+    type js = episode_jsoo t
+    type t = episode
+    let to_js = episode_to_jsoo
+    let of_js = episode_of_jsoo
+  end)
+
 module ConfigStore = Store(StringTr)(StringTr)
 
 module ProxyStore = Store(StringTr)(struct
@@ -41,16 +48,23 @@ module ProxyStore = Store(StringTr)(struct
     let of_js = proxy_of_jsoo
   end)
 
-let versions = [ {
-  version = 1;
-  upgrade = (fun db ->
-    ignore @@ ShowStore.create db;
-    ignore @@ ConfigStore.create db;
-    ignore @@ ProxyStore.create db);
-  downgrade = (fun db ->
-    db##deleteObjectStore (string "shows");
-    db##deleteObjectStore (string "config");
-    db##deleteObjectStore (string "proxies")) } ]
+let versions = [
+  {
+    version = 1;
+    upgrade = (fun db ->
+      ignore @@ ShowStore.create db;
+      ignore @@ ConfigStore.create db;
+      ignore @@ ProxyStore.create db);
+    downgrade = (fun db ->
+      db##deleteObjectStore (string "shows");
+      db##deleteObjectStore (string "config");
+      db##deleteObjectStore (string "proxies"))
+  }; {
+    version = 2;
+    upgrade = (fun db -> ignore @@ EpisodeStore.create db);
+    downgrade = (fun db -> db##deleteObjectStore (string "episodes"))
+  };
+]
 
 let upgrade db e =
   if e.new_version > e.old_version then
@@ -69,6 +83,7 @@ let open_db ?(version=List.length versions) f =
       log "open_db error (%s)" (to_string r##.name);
       js_log r##.message in
   ShowStore.set_name "shows";
+  EpisodeStore.set_name "episodes";
   ConfigStore.set_name "config";
   ProxyStore.set_name "proxies";
   openDB ~upgrade ~error ~version "series" f
@@ -151,3 +166,34 @@ let update_config ~key db value =
 let remove_config ~key db =
   let st = ConfigStore.store ~mode:READWRITE db in
   ConfigStore.(delete st (K key))
+
+(* episodes *)
+
+let get_episode db id =
+  let st = EpisodeStore.store ~mode:READONLY db in
+  let w, n = Lwt.wait () in
+  EpisodeStore.get ~error:(fun _ -> Lwt.wakeup n (Error (0, []))) st
+    (fun s -> Lwt.wakeup n (Ok s)) (EpisodeStore.K id);
+  w
+
+let add_episode db id e =
+  let st = EpisodeStore.store ~mode:READWRITE db in
+  EpisodeStore.add ~key:id st e
+
+let put_episode db id e =
+  let st = EpisodeStore.store ~mode:READWRITE db in
+  EpisodeStore.put ~key:id st e
+
+let remove_episode db id =
+  let st = EpisodeStore.store ~mode:READWRITE db in
+  EpisodeStore.delete st (EpisodeStore.K id)
+
+let manage_episode db =
+  get_episode db, add_episode db, put_episode db, remove_episode db
+
+let get_episodes db =
+  let st = EpisodeStore.store ~mode:READONLY db in
+  let w, n = Lwt.wait () in
+  EpisodeStore.get_all ~error:(fun _ -> Lwt.wakeup n (Error (0, []))) st
+    (fun l -> Lwt.wakeup n (Ok l));
+  w

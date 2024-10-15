@@ -244,6 +244,19 @@ let get_and_store_show ?store ?(fill=true) ?show ~token id =
       s
     | Ok (Some s) -> rok s
 
+let get_and_store_episode ?store ~token id =
+  match store with
+  | None -> get_episode ~token id
+  | Some (get, add, _put, _delete) ->
+    let> r = get id in
+    match r with
+    | Error _ | Ok None ->
+      let|>? e = get_episode ~token id in
+      add id e;
+      e
+    | Ok (Some e) -> rok e
+
+
 let unseen_episode ?store ?fill ?(period=Cal.Period.day 8) ~token ?(show: show option) ~id ~now e =
   let e = { e with e_title = format_filename e.e_title } in
   match e.e_date with
@@ -255,7 +268,8 @@ let unseen_episode ?store ?fill ?(period=Cal.Period.day 8) ~token ?(show: show o
       Some {es_show; es_episode}
     else rok None
 
-let get_unseen ?(limit=1) ?(released=0) ?period ?store ?id ?fill ?order token =
+
+let get_unseen ?(limit=1) ?(released=0) ?period ?store ?id ?fill ?order ?episode_store token =
   let now = Cal.today () in
   let>? shows = get_episodes ~limit ~released ?id token in
   let>? episodes = fold (fun acc s ->
@@ -268,7 +282,7 @@ let get_unseen ?(limit=1) ?(released=0) ?period ?store ?id ?fill ?order token =
   let|>? planning = fold (fun acc d ->
     let events = List.filter_map (function Episode_release er -> Some er | _ -> None) d.events in
     fold (fun acc ev ->
-      let>? e = get_episode ~token ev.er_id in
+      let>? e = get_and_store_episode ?store:episode_store ~token ev.er_id in
       if e.e_user.eu_seen then rok acc else
       if List.exists (fun x -> x.es_show.s_id = ev.er_show_id) acc then rok acc else
       let|>? e = unseen_episode ?store ?fill ?period ~token ~id:ev.er_show_id ~now e in

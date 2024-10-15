@@ -236,11 +236,13 @@ and update_shows app =
 let%meth set_outdated _app (s: show_jsoo t) =
   s##.outdated := _true [@@noconv]
 
-and refresh_episode app (id: int) =
+and refresh_episode app (id: int) (episode: int) =
   locked := true;
   Promise.promise_lwt @@
   let order = order_of_jsoo app##.order in
-  let|>? new_shows = Api.get_unseen ~store:(Idb.manage_show app##.db) ~id ~order (to_string app##.token) in
+  Idb.remove_episode app##.db episode;
+  let|>? new_shows = Api.get_unseen ~store:(Idb.manage_show app##.db) ~id ~order
+      ~episode_store:(Idb.manage_episode app##.db) (to_string app##.token) in
   let () = match new_shows with
     | [] ->
       let shows = of_listf episode_show_to_jsoo @@
@@ -352,7 +354,8 @@ let my_series (app: all t) =
 let home (app: all t) =
   clear app;
   let order = order_of_jsoo app##.order in
-  let|>? shows = Api.get_unseen ~store:(Idb.manage_show app##.db) ~order (to_string app##.token) in
+  let|>? shows = Api.get_unseen ~store:(Idb.manage_show app##.db) ~order
+      ~episode_store:(Idb.manage_episode app##.db) (to_string app##.token) in
   app##.shows := of_listf episode_show_to_jsoo shows;
   "home"
 
