@@ -221,7 +221,11 @@ let compare_episode_show ?(order=`asc) s1 s2 =
 
 let update_show ?show s = match show with
   | None -> s
-  | Some show -> {show with s_images = s.s_images; s_genres = s.s_genres}
+  | Some show -> {
+      show with
+      s_images = s.s_images; s_genres = s.s_genres;
+      s_language = s.s_language;
+    }
 
 let get_and_store_show ?store ?(fill=true) ?show ~token id =
   match fill, show, store with
