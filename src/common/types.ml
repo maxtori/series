@@ -83,7 +83,8 @@ type show = {
   s_in_account: bool; [@dft false]
   s_seasons: string; [@dft ""]
   s_user: show_user; [@dft {su_archived=false; su_favorited=false}]
-  s_aliases: (string * string) list [@assoc] [@dft []]
+  s_aliases: (string * string) list; [@assoc] [@dft []]
+  s_language: string option;
 } [@@deriving encoding {ignore}, jsoo]
 
 type show_unseen = {

@@ -149,7 +149,7 @@
                       </div>
                       <div class="row g-0">
                         <div class="col-12 col-sm-6 d-flex justify-content-around my-2">
-                          <a v-for="p in proxies" v-show="p.kind=='anime' && Object.keys(s.show.genres).includes('Animation') || p.kind=='series' && !Object.keys(s.show.genres).includes('Animation') || p.kind=='both'" :class="'btn btn-'+variant(s.episode)" :href="p.url+encodeURIComponent(s.show.title+' '+(p.with_code ? s.episode.code : '')+resolution)+p.post_url" target="_blank">{{ p.name }}</a>
+                          <a v-for="p in proxies" v-show="p.kind=='both' || p.kind=='anime' && Object.keys(s.show.genres).includes('Animation') || p.kind=='series' && !Object.keys(s.show.genres).includes('Animation') || p.kind=='french' && s.show.language=='fr'" :class="'btn btn-'+variant(s.episode)" :href="p.url+encodeURIComponent(s.show.title+' '+(p.with_code ? s.episode.code : '')+resolution)+p.post_url" target="_blank">{{ p.name }}</a>
                         </div>
                         <div class="d-none d-sm-flex col-sm-6 justify-content-around my-2">
                           <load-button :variant="s.episode.user.downloaded ? 'success' : 'outline-secondary'" :action="() => downloaded(s.episode)">Downloaded</load-button>
@@ -334,7 +334,7 @@
                     <th scope="col">Name</th>
                     <th scope="col">URL</th>
                     <th scope="col">Code</th>
-                    <th scope="col">Anime</th>
+                    <th scope="col">Kind</th>
                     <th scope="col"></th>
                   </tr>
                 </thead>
@@ -378,9 +378,10 @@
                     <div class="input-group mb-2">
                       <span class="input-group-text">kind</span>
                       <select v-model="proxy.kind" class="form-select">
-                        <option value="both" selected>both</option>
+                        <option value="all" selected>all</option>
                         <option value="anime">anime</option>
                         <option value="series">series</option>
+                        <option value="french">french</option>
                       </select>
                     </div>
                   </div>
