@@ -216,7 +216,7 @@ and variant _app (e: episode) : string =
   else if e.e_status = "maybe" then "info"
   else "outline-secondary"
 
-let%meth rec update_show app (s: show) (reset: bool) =
+let%meth update_show app (s: show) (reset: bool) =
   Api.run @@
   let>? s2 = Api.get_show ~token:(to_string app##.token) s.s_id in
   let es_show = {s2 with s_title = s.s_title; s_outdated = false} in
@@ -229,7 +229,7 @@ let%meth rec update_show app (s: show) (reset: bool) =
   if reset then let|>? _ = serie app s.s_id in ()
   else Lwt.return_ok ()
 
-and update_shows app =
+let%meth update_shows app =
   let shows = to_listf episode_show_of_jsoo app##.shows in
   List.iter (fun s -> if s.es_show.s_outdated then update_show app s.es_show false) shows
 
