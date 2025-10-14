@@ -4,6 +4,7 @@ open EzAPI
 open EzReq_lwt
 
 let base = BASE "https://api.betaseries.com"
+let () = Req.user_agent_header := None
 
 (* AUTH *)
 
