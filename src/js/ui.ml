@@ -43,7 +43,7 @@ module CopyButton = struct
     apply app tp true;
     ignore @@ Dom_html.window##setTimeout
       (wrap_callback @@ fun () -> apply app tp false)
-      5000.
+      (Ezjs_min.number_of_float 5000.)
 
   [%%mounted fun app ->
     let cs : _ constr = Unsafe.global##.bootstrap##._Tooltip in
@@ -179,7 +179,7 @@ let set_state ?(scroll=true) ?(replace=false) app id =
     Dom_html.window##.history##replaceState (some @@ Unsafe.coerce state) (string "")  (opt string path)
   else
     Dom_html.window##.history##pushState (some @@ Unsafe.coerce state) (string "")  (opt string path);
-  if scroll then Dom_html.window##scroll 0 0
+  if scroll then Dom_html.window##scroll (Ezjs_min.number_of_float 0.) (Ezjs_min.number_of_float 0.)
 
 let get_page () =
   match to_string Dom_html.window##.location##.search with
@@ -231,7 +231,8 @@ let%meth update_show app (s: show) (reset: bool) =
 
 let%meth update_shows app =
   let shows = to_listf episode_show_of_jsoo app##.shows in
-  List.iter (fun s -> if s.es_show.s_outdated then update_show app s.es_show false) shows
+  List.iter (fun s -> if s.es_show.s_outdated then update_show app s.es_show false) shows;
+  Idb.clear_episodes app##.db
 
 let%meth set_outdated _app (s: show_jsoo t) =
   s##.outdated := _true [@@noconv]

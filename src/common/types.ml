@@ -8,8 +8,8 @@ type tsp = Cal.t [@encoding conv CalendarLib.Printer.Date.to_string CalendarLib.
 [@@deriving encoding]
 [@@@jsoo
   class type tsp_jsoo = Ezjs_min.date
-  let tsp_to_jsoo c = new%js Ezjs_min.date_fromTimeValue (1000. *. Cal.to_unixfloat c)
-  let tsp_of_jsoo js = Cal.from_unixfloat (js##getTime /. 1000.)
+  let tsp_to_jsoo c = new%js Ezjs_min.date_fromTimeValue (Ezjs_min.number_of_float (1000. *. Cal.to_unixfloat c))
+  let tsp_of_jsoo js = Cal.from_unixfloat ((Ezjs_min.float_of_number js##getTime) /. 1000.)
   let tsp_jsoo_conv = tsp_to_jsoo, tsp_of_jsoo
 ]
 

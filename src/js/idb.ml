@@ -197,3 +197,7 @@ let get_episodes db =
   EpisodeStore.get_all ~error:(fun _ -> Lwt.wakeup n (Error (0, []))) st
     (fun l -> Lwt.wakeup n (Ok l));
   w
+
+let clear_episodes db =
+  let st = EpisodeStore.store ~mode:READWRITE db in
+  EpisodeStore.clear st
