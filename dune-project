@@ -17,7 +17,6 @@
    calendar
    ezjs_idb
    ezjs_fetch
-   ezjs_push
    (ppx_deriving_encoding :build)
    (ppx_deriving_jsoo :build)
    (ppx_deriving_empty :build)
