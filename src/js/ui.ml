@@ -125,6 +125,7 @@ and series : show list = []
 and serie : serie option = None
 and login : login = {username=""; password=""}
 and proxy : Idb.proxy = Idb.dummy_proxy
+and tsp : int = Int32.to_int (to_int32 date##now) / 1000
 
 let clear ?(query=true) app =
   app##.serie := undefined;
@@ -361,6 +362,7 @@ let home (app: all t) =
   "home"
 
 let%meth route app (page: string) (id: int option) =
+  app##.tsp := Int32.to_int (to_int32 date##now) / 1000;
   set_state ~replace:true app id;
   if !Api.verbose then
     log "route %S%s" page @@
@@ -426,11 +428,6 @@ let%meth [@noconv] set_api_key app (ev: Dom_html.inputElement Dom.event t) =
   Idb.update_config ~key:"api_key" app##.db key;
   Api.run @@ init ~home:true app
 
-let register_worker () =
-  if to_string Dom_html.window##.location##.protocol = "https:" then
-    let service_worker = Ezjs_push.service_worker () in
-    Promise.jthen (service_worker##register (string "sw.js") undefined) @@ fun _ -> ()
-
 [%%mounted fun app ->
   Api.run @@
   if !Api.api_key = "" then Lwt.return_ok @@ route app "key" None
@@ -438,7 +435,6 @@ let register_worker () =
 ]
 
 let () =
-  register_worker ();
   Idb.open_db @@ fun db ->
   Api.run @@
   let>? theme = Idb.get_config ~key:"theme" db in
@@ -461,4 +457,8 @@ let () =
   let app = [%app {conv; types; mount; unhide; export; components=[CopyButton; LoadButton]}] in
   Dom_html.window##.onpopstate := Dom_html.handler (fun (e : Dom_html.popStateEvent t) ->
     get_state app e##.state; _false);
+  (Unsafe.coerce Dom_html.window)##.onfocus := Dom_html.handler (fun (_e : Dom_html.popStateEvent t) ->
+    let now = Int32.to_int (to_int32 date##now) / 1000 in
+    if now > app##.tsp + 3600 then Api.run (init (app :> all t));
+    _false);
   Lwt.return_ok ()
