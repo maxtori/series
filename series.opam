@@ -10,6 +10,7 @@ bug-reports: "https://github.com/maxtori/series/issues"
 depends: [
   "dune" {>= "3.2"}
   "ez_api"
+  "lwt"
   "calendar"
   "ezjs_idb"
   "ezjs_fetch"

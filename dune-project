@@ -14,6 +14,7 @@
  (synopsis "series")
  (depends
    ez_api
+   lwt
    calendar
    ezjs_idb
    ezjs_fetch
