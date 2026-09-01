@@ -86,7 +86,7 @@ type show = {
   s_description: string; [@dft ""]
   s_creation: string; [@dft ""] [@encoding int_or_string_enc]
   s_in_account: bool; [@dft false]
-  s_seasons: string; [@dft ""]
+  s_seasons: string; [@dft ""] [@encoding int_or_string_enc]
   s_user: show_user; [@dft {su_archived=false; su_favorited=false}]
   s_aliases: (string * string) list; [@assoc] [@dft []]
   s_language: string option;
