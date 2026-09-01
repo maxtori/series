@@ -23,7 +23,7 @@ jobs:
       - name: Setup OCaml
         uses: ocaml/setup-ocaml@v3
         with:
-          ocaml-compiler: 4
+          ocaml-compiler: 5
       - run: opam install . --deps-only
       - run: opam exec -- make js
       - name: Upload artifact

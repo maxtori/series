@@ -28,4 +28,4 @@
  (name test)
  (modules test)
  (preprocess (pps ppx_deriving_arg))
- (libraries api))
+ (libraries api lwt.unix))

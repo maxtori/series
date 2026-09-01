@@ -1,5 +1,5 @@
 (executable
  (name main)
  (modules main)
- (libraries api)
+ (libraries api lwt.unix)
  (modes byte))

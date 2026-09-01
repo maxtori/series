@@ -127,6 +127,8 @@ and login : login = {username=""; password=""}
 and proxy : Idb.proxy = Idb.dummy_proxy
 and tsp : int = Int32.to_int (to_int32 date##now) / 1000
 
+let run p = Lwt.async (fun () -> Api.print_error p)
+
 let clear ?(query=true) app =
   app##.serie := undefined;
   app##.series := of_list [];
@@ -218,7 +220,7 @@ and variant _app (e: episode) : string =
   else "outline-secondary"
 
 let%meth update_show app (s: show) (reset: bool) =
-  Api.run @@
+  run @@
   let>? s2 = Api.get_show ~token:(to_string app##.token) s.s_id in
   let es_show = {s2 with s_title = s.s_title; s_outdated = false} in
   Idb.put_show app##.db s.s_id es_show;
@@ -258,7 +260,7 @@ and refresh_episode app (id: int) (episode: int) =
   locked := false
 
 and add_show app (id: int) =
-  Api.run @@
+  run @@
   let|>? r = Api.add_show ~token:(to_string app##.token) id in
   Idb.add_show app##.db r.s_id r;
   List.iteri
@@ -268,7 +270,7 @@ and add_show app (id: int) =
 
 and remove_show app (id: int) =
   Idb.remove_show app##.db id;
-  Api.run @@
+  run @@
   let|>? r = Api.remove_show ~token:(to_string app##.token) id in
   List.iteri
     (fun i s -> if s.s_id = id then
@@ -276,7 +278,7 @@ and remove_show app (id: int) =
     (to_listf show_of_jsoo app##.series)
 
 and archive_show app (id: int) =
-  Api.run @@
+  run @@
   let|>? r = Api.archive_show ~token:(to_string app##.token) id in
   List.iteri
     (fun i s -> if s.s_id = id then
@@ -284,7 +286,7 @@ and archive_show app (id: int) =
     (to_listf show_of_jsoo app##.series)
 
 and unarchive_show app (id: int) =
-  Api.run @@
+  run @@
   let|>? r = Api.unarchive_show ~token:(to_string app##.token) id in
   List.iteri
     (fun i s -> if s.s_id = id then
@@ -311,7 +313,7 @@ and update_episodes app (season: int) =
   match serie with
   | None -> ()
   | Some serie ->
-    Api.run @@
+    run @@
     let|>? se_episodes = Api.get_show_episodes ~token:(to_string app##.token) ~season serie.se_show.s_id in
     match Optdef.to_option app##.serie with
     | None -> ()
@@ -368,7 +370,7 @@ let%meth route app (page: string) (id: int option) =
     log "route %S%s" page @@
     Option.fold ~none:"" ~some:(fun id -> "("^ string_of_int id ^")") id;
   app##.page := string "loading";
-  Api.run @@
+  run @@
   let|>? page = match page with
     | "search" -> search app
     | "discover" -> discover app
@@ -389,7 +391,7 @@ let%meth sign_out app =
 
 and sign_in app =
   let login = login_of_jsoo app##.login in
-  Api.run @@
+  run @@
   let|>? auth = Api.request_token ~login:login.username ~password:login.password in
   app##.token := (string auth.a_token);
   Idb.update_config ~key:"token" app##.db auth.a_token;
@@ -426,17 +428,17 @@ let%meth [@noconv] set_api_key app (ev: Dom_html.inputElement Dom.event t) =
   let key = to_string (Option.get @@ Opt.to_option ev##.target)##.value in
   Api.api_key := key;
   Idb.update_config ~key:"api_key" app##.db key;
-  Api.run @@ init ~home:true app
+  run @@ init ~home:true app
 
 [%%mounted fun app ->
-  Api.run @@
+  run @@
   if !Api.api_key = "" then Lwt.return_ok @@ route app "key" None
   else init app
 ]
 
 let () =
   Idb.open_db @@ fun db ->
-  Api.run @@
+  run @@
   let>? theme = Idb.get_config ~key:"theme" db in
   let theme = match theme with
     | Some "light" -> set_body_theme "light"; "light"
@@ -459,6 +461,6 @@ let () =
     get_state app e##.state; _false);
   (Unsafe.coerce Dom_html.window)##.onfocus := Dom_html.handler (fun (_e : Dom_html.popStateEvent t) ->
     let now = Int32.to_int (to_int32 date##now) / 1000 in
-    if now > app##.tsp + 3600 then Api.run (init (app :> all t));
+    if now > app##.tsp + 3600 then run (init (app :> all t));
     _false);
   Lwt.return_ok ()

@@ -19,6 +19,11 @@ type json = Json_repr.ezjsonm [@@deriving encoding]
   let json_to_jsoo = Js_json.js_of_json
   let json_of_jsoo = Js_json.json_of_js]
 
+let int_or_string_enc = union [
+  case string Option.some Fun.id;
+  case int53 Int64.of_string_opt Int64.to_string;
+]
+
 type user = {
   u_id: int;
   u_login: string;
@@ -79,7 +84,7 @@ type show = {
   s_images: (string * [`url of string | `json of json]) list; [@assoc] [@dft []]
   s_outdated: bool; [@exclude false] [@mutable]
   s_description: string; [@dft ""]
-  s_creation: string; [@dft ""]
+  s_creation: string; [@dft ""] [@encoding int_or_string_enc]
   s_in_account: bool; [@dft false]
   s_seasons: string; [@dft ""]
   s_user: show_user; [@dft {su_archived=false; su_favorited=false}]

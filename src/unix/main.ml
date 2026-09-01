@@ -99,4 +99,4 @@ let () =
     "alias of --command";
   ] in
   Arg.parse specs (fun _ -> ()) "Series";
-  EzLwtSys.run main
+  Lwt_main.run @@ main ()

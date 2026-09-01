@@ -294,5 +294,3 @@ let get_unseen ?(limit=1) ?(released=0) ?period ?store ?id ?fill ?order ?episode
       match e with None -> acc | Some e -> e :: acc) acc events
   ) episodes planning in
   List.sort (compare_episode_show ?order) planning
-
-let run p = EzLwtSys.run (fun () -> print_error p)
