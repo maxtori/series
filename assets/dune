@@ -1,0 +1,9 @@
+(install
+ (package series)
+ (section share)
+ (files
+  (glob_files *.css)
+  (glob_files *.svg)
+  (glob_files *.png)
+  (glob_files *.json)
+  (glob_files *.html)))
