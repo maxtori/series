@@ -73,28 +73,29 @@ type show_user = {
   su_favorited : bool;
 } [@@deriving encoding {ignore}, jsoo]
 
+let genres_enc = union [
+  case (list (tup2 string string)) (function [] -> Some [] | _ -> None) (fun l -> l);
+  case (assoc string) (fun l -> Some l) (fun l -> l) ]
+
 type show = {
   s_id: int;
   s_imdb_id: string option;
   s_title: string; [@mutable]
-  s_genres: (string * string) list;
-  [@dft []] [@assoc] [@encoding union [
-  case (list (tup2 string string)) (function [] -> Some [] | _ -> None) (fun l -> l);
-  case (assoc string) (fun l -> Some l) (fun l -> l)]]
+  s_genres: (string * string) list; [@enc.dft []] [@assoc] [@encoding genres_enc]
   s_images: (string * [`url of string | `json of json]) list; [@assoc] [@dft []]
   s_outdated: bool; [@exclude false] [@mutable]
-  s_description: string; [@dft ""]
-  s_creation: string; [@dft ""] [@encoding int_or_string_enc]
-  s_in_account: bool; [@dft false]
-  s_seasons: string; [@dft ""] [@encoding int_or_string_enc]
-  s_user: show_user; [@dft {su_archived=false; su_favorited=false}]
-  s_aliases: (string * string) list; [@assoc] [@dft []]
+  s_description: string; [@enc.dft ""]
+  s_creation: string; [@enc.dft ""] [@encoding int_or_string_enc]
+  s_in_account: bool; [@enc.dft false]
+  s_seasons: string; [@enc.dft ""] [@encoding int_or_string_enc]
+  s_user: show_user; [@enc.dft {su_archived=false; su_favorited=false}]
+  s_aliases: (string * string) list; [@assoc] [@enc.dft []]
   s_language: string option;
 } [@@deriving encoding {ignore}, jsoo]
 
 type show_unseen = {
   su_show : show [@merge];
-  su_unseen : episode list; [@dft []]
+  su_unseen : episode list; [@enc.dft []]
 } [@@deriving encoding]
 
 type episode_show = {
@@ -135,7 +136,7 @@ type timeline_event =
 type timeline_day = {
   date: tsp;
   density: string;
-  events: timeline_event list; [@dft []]
+  events: timeline_event list; [@enc.dft []]
 } [@@deriving encoding]
 
 type planning = (timeline_day list [@obj1 "days"]) [@@deriving encoding {ignore}]
