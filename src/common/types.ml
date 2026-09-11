@@ -116,8 +116,6 @@ let unknown_kind_enc =
   conv (fun s -> s, ()) fst @@
   merge_objs (obj1 (req "type" string)) unit
 
-let string_int_enc = conv string_of_int int_of_string string
-
 type episode_release_payload = {
   er_id: int;
   er_show_id: int;
@@ -125,8 +123,8 @@ type episode_release_payload = {
   er_show_slug: string;
   er_title: string;
   er_code: string;
-  er_season: int; [@encoding string_int_enc]
-  er_episode: int; [@encoding string_int_enc]
+  er_season: int;
+  er_episode: int;
 } [@@deriving encoding {ignore}]
 
 type timeline_event =
